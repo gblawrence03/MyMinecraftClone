@@ -11,8 +11,9 @@ uniform vec3 globalLightDir;
 void main()
 {
 	vec3 lightDir = normalize(globalLightDir);
-	float ambientStrength = 0.2;
+	float ambientStrength = 0.3;
+	float minimumStrength = 0.7;
 	float diff = max(dot(normalize(normal), -lightDir), 0.0);
-	FragColor = (diff + ambientStrength) * mix(texture(texture1, texCoord),
+	FragColor = max(minimumStrength, ambientStrength + diff) * mix(texture(texture1, texCoord),
 	 				texture(texture2, vec2(texCoord.x, texCoord.y)), lerp);
 }

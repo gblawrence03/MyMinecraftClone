@@ -36,7 +36,8 @@ public class Texture {
 			imageBuffer = stbi_load(imagePath, w, h, comp, 4);
 			if (imageBuffer == null) {
 				throw new RuntimeException("Failed to load a texture file!"
-											+ System.lineSeparator() + stbi_failure_reason());
+											+ System.lineSeparator() + stbi_failure_reason() 
+											+ System.lineSeparator() + imagePath);
 			}
 			
 			width = w.get();

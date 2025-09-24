@@ -54,8 +54,8 @@ public class Camera {
 		Pitch += yOffset;
 		
 		if (clampPitch) {
-			if (Pitch > 89.0f) Pitch = 89.0f;
-			if (Pitch < -89.0f) Pitch = -89.0f;
+			if (Pitch > 89.9f) Pitch = 89.9f;
+			if (Pitch < -89.9f) Pitch = -89.9f;
 		}
 		updateCameraVectors();
 	}

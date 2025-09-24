@@ -2,6 +2,7 @@ import org.lwjgl.*;
 import org.lwjgl.glfw.*;
 import org.lwjgl.opengl.*;
 import org.lwjgl.system.*;
+import org.lwjgl.Version;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -30,12 +31,10 @@ import static org.lwjgl.system.MemoryUtil.*;
  *
  */
 
-public class HelloWindow {
+public class Window {
 	// Window handle
 	private long window;
 	private Shader shader;
-	private Texture texture;
-	private Texture texture2;
 	private Camera camera;
 	private WorldGenerator world;
 	
@@ -67,11 +66,11 @@ public class HelloWindow {
 	};
 	
 	public static void main(String[] args) {
-		new HelloWindow().run();
+		new Window().run();
 	}
 	
 	public void run() {
-		logger = Logger.getLogger(HelloWindow.class.getName());
+		logger = Logger.getLogger(Window.class.getName());
 		logger.setLevel(Level.INFO);
 		logger.info("LWJGL version: " + Version.getVersion());
 		
@@ -108,7 +107,7 @@ public class HelloWindow {
 		aspectRatio = (float) windowWidth / (float) windowHeight;
 		logger.info("Ratio: " + aspectRatio);
 		
-		window = glfwCreateWindow(windowWidth, windowHeight, "LearnOpenGL", NULL, NULL);
+		window = glfwCreateWindow(windowWidth, windowHeight, "MyMinecraftClone", NULL, NULL);
 		if (window == NULL ) throw new RuntimeException("Failed to create the GLFW window");
 		
 		glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
@@ -190,7 +189,7 @@ public class HelloWindow {
 		glfwMakeContextCurrent(window);
 	
 		// Enable vsync
-		glfwSwapInterval(0);
+		// glfwSwapInterval(0);
 		// Make window visible
 		glfwShowWindow(window);
 	}
@@ -201,12 +200,10 @@ public class HelloWindow {
 		// Set viewport
 		glViewport(0, 0, windowWidth, windowHeight);
 		
-		glClearColor(0.2f, 0.5f, 0.7f, 0.0f);
+		glClearColor(0.6f, 0.7f, 0.85f, 0.0f);
 
 		// Create shader, texture, camera objects
-		shader = new Shader("src/vertexShader1.glsl", "src/fragmentShader1.glsl");
-		texture = new Texture("data/wall.jpg");
-		texture2 = new Texture("data/download.png");
+		shader = new Shader("src/blockVertex.glsl", "src/blockFragment.glsl");
 		
 		VAO = glGenVertexArrays();
 		VBO = glGenBuffers();
@@ -214,7 +211,7 @@ public class HelloWindow {
 		
 		glBindVertexArray(VAO);
 		
-		Vector3f cameraPos = new Vector3f(0.0f, 5.0f, 3.0f);
+		Vector3f cameraPos = new Vector3f(0.0f, 15.0f, 0.0f);
 		Vector3f cameraUp = new Vector3f(0.0f, 1.0f, 0.0f);
 		float yaw = 90;
 		float pitch = 0;
@@ -256,7 +253,11 @@ public class HelloWindow {
 		long frames = 0;
 		deltaTime = 0.0f;
 		
-		world = new WorldGenerator((int)(Math.random() * 1000), 150, 150, 30);
+		String worldSeedString = "hello world!";
+		int worldSeed = worldSeedString.hashCode();
+		logger.info("Generating world. Seed for the world generator: \"" + worldSeedString + "\" -> " + worldSeed);
+
+		world = new WorldGenerator(worldSeed, 150, 150, 30);
 		// world = new WorldGenerator(100, 100, 100, 10);
 		
 		while ( !glfwWindowShouldClose(window) ) {	
@@ -283,47 +284,34 @@ public class HelloWindow {
 	private void render() {
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT ); // clear frame buffer
 		
-		// Only needed if more than 1 texture
-		glActiveTexture(GL_TEXTURE0);
-		texture.bind();
-		glActiveTexture(GL_TEXTURE1);
-		texture2.bind();
-		shader.setInt("texture1", 0);
-		shader.setInt("texture2", 1);
-		
 		glBindVertexArray(VAO);
 		
-		// Matrix4f model = (new Matrix4f()).rotate((float) glfwGetTime() * (float) Math.toRadians(45.0f), new Vector3f(0.0f, 1.0f, 0.0f));
-
 		Matrix4f view = camera.getViewMatrix();
 		Matrix4f perspective = (new Matrix4f()).perspective((float) Math.toRadians(camera.Zoom), aspectRatio, 0.1f, 1000.0f);
 
-		// shader.setMat4("model", model);
 		shader.setMat4("view", view);
 		shader.setMat4("perspective", perspective);
-		shader.setVec3("globalLightDir", new Vector3f(0.8f, -1.0f, 0.3f));
+		shader.setVec3("globalLightDir", new Vector3f(0.7f, -1.0f, 0.5f));
 		shader.setVec3("cameraDir", camera.Front);
 		shader.setVec3("cameraPos", camera.Position);
 		
 		// Create a bunch of cubes
 		glActiveTexture(GL_TEXTURE0);
 		
-		for (int x = 0; x < world.positions.length; x++) {
-			for (int y = 0; y < world.positions[x].length; y++) {
-				for (int z = 0; z < world.positions[x][y].length; z++) {
+		for (int x = 0; x < world.length; x++) {
+			for (int y = 0; y < world.height; y++) {
+				for (int z = 0; z < world.width; z++) {
 					if (world.positions[x][y][z].type != Block.BlockType.AIR
 							&& world.blockAdjacentToAir(x, y, z)) {
 						world.positions[x][y][z].setTexture();
 						Matrix4f model = new Matrix4f();
-						model.translate(x, y, z);
+						model.translate(x - (int) world.length / 2, y - (int) world.height / 2, z - (int) world.width / 2);
 						shader.setMat4("model", model);
 						glDrawArrays(GL_TRIANGLES, 0, 36);
 					}
 				}
 			}
 		}
-	
-		// glDrawElements(GL_TRIANGLES, indices.length, GL_UNSIGNED_INT, 0);
 	}
 	
 	private void processInput() {

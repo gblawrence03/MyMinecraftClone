@@ -11,21 +11,23 @@ public class WorldGenerator {
 		this.length = length;
 		this.width = width;
 		this.height = height;
-		this.seaLevel = (int) (height / 2.5);
+		this.seaLevel = (int) (height / 3);
 		
 		// Generate seeds
-		int layer1Seed = seed;
+		
 		Random ran = new Random(seed);
-		int layer2Seed = ran.nextInt(10000);
-		int layer3Seed = ran.nextInt(10000);
 		
-		int layer1Wavelength = 40;
-		int layer2Wavelength = 20;
-		int layer3Wavelength = 10;
+		int layer1Seed = ran.nextInt(Integer.MAX_VALUE);
+		int layer2Seed = ran.nextInt(Integer.MAX_VALUE);
+		int layer3Seed = ran.nextInt(Integer.MAX_VALUE);
 		
-		float layer1Amplitude = 0.4f;
-		float layer2Amplitude = 0.2f;
-		float layer3Amplitude = 0.1f;
+		int layer1Wavelength = 80;
+		int layer2Wavelength = 40;
+		int layer3Wavelength = 20;
+		
+		float layer1Amplitude = 0.6f;
+		float layer2Amplitude = 0.3f;
+		float layer3Amplitude = 0.2f;
 		
 		positions = new Block[length][height][width];
 		
