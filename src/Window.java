@@ -65,6 +65,9 @@ public class Window {
 			4, 3, 0
 	};
 	
+	private ArrayList<Float> blockVertices = new ArrayList<Float>();
+	private FloatBuffer verticesBuffer;
+	
 	public static void main(String[] args) {
 		new Window().run();
 	}
@@ -188,8 +191,8 @@ public class Window {
 		// Make OpenGL context current
 		glfwMakeContextCurrent(window);
 	
-		// Enable vsync
-		// glfwSwapInterval(0);
+		// Disable vsync
+		glfwSwapInterval(0);
 		// Make window visible
 		glfwShowWindow(window);
 	}
@@ -211,7 +214,22 @@ public class Window {
 		
 		glBindVertexArray(VAO);
 		
-		Vector3f cameraPos = new Vector3f(0.0f, 15.0f, 0.0f);
+		String worldSeedString = "hello world!";
+		int worldSeed = worldSeedString.hashCode();
+		logger.info("Generating world. Seed for the world generator: \"" + worldSeedString + "\" -> " + worldSeed);
+
+		world = new WorldGenerator(worldSeed, 500, 500, 50);
+		generateBlockVertices();
+		FloatBuffer verticesBuffer = MemoryUtil.memAllocFloat(blockVertices.size());
+		
+		for (int i = 0; i < blockVertices.size(); i++) {
+			verticesBuffer.put(blockVertices.get(i));
+		}
+		
+		verticesBuffer.flip();
+		
+	
+		Vector3f cameraPos = new Vector3f(0.0f, 5.0f, 0.0f);
 		Vector3f cameraUp = new Vector3f(0.0f, 1.0f, 0.0f);
 		float yaw = 90;
 		float pitch = 0;
@@ -220,7 +238,7 @@ public class Window {
 		
 		// Set up VBO
 		glBindBuffer(GL_ARRAY_BUFFER, VBO);
-		glBufferData(GL_ARRAY_BUFFER, Block.vertices, GL_STATIC_DRAW);
+		glBufferData(GL_ARRAY_BUFFER, verticesBuffer, GL_STATIC_DRAW);
 		
 		// Set up EBO
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
@@ -253,11 +271,6 @@ public class Window {
 		long frames = 0;
 		deltaTime = 0.0f;
 		
-		String worldSeedString = "hello world!";
-		int worldSeed = worldSeedString.hashCode();
-		logger.info("Generating world. Seed for the world generator: \"" + worldSeedString + "\" -> " + worldSeed);
-
-		world = new WorldGenerator(worldSeed, 150, 150, 30);
 		// world = new WorldGenerator(100, 100, 100, 10);
 		
 		while ( !glfwWindowShouldClose(window) ) {	
@@ -281,6 +294,42 @@ public class Window {
 		logger.info("Window closed");
 	}
 	
+	private void generateBlockVertices() {
+		for (int x = 0; x < world.length; x++) {
+			for (int y = 0; y < world.height; y++) {
+				for (int z = 0; z < world.width; z++) {
+					if (world.positions[x][y][z].type != Block.BlockType.AIR
+						&& world.blockAdjacentToAir(x, y, z)) {
+						for (int i = 0; i < 36; i++) {
+							// Positions 
+							float xPos = Block.vertices[i * 8 + 0];
+							float yPos = Block.vertices[i * 8 + 1];
+							float zPos = Block.vertices[i * 8 + 2];
+							blockVertices.add(xPos + x - (int) world.length / 2);
+							blockVertices.add(yPos + y - (int) world.height / 2);
+							blockVertices.add(zPos + z - (int) world.width / 2);
+							// Normals 
+							blockVertices.add(Block.vertices[i * 8 + 3]);
+							blockVertices.add(Block.vertices[i * 8 + 4]);
+							blockVertices.add(Block.vertices[i * 8 + 5]);
+							
+							int ordinal = world.positions[x][y][z].type.ordinal();
+							
+							// Textures
+							int atlasWidth = 2;
+							int atlasHeight = 2;
+							int atlasYPos = ordinal / atlasWidth;
+							int atlasXPos = ordinal % atlasHeight;
+							
+							blockVertices.add(((float) atlasXPos + Block.vertices[i * 8 + 6]) / (float) atlasWidth);
+							blockVertices.add(1 - ((float) atlasYPos + Block.vertices[i * 8 + 7]) / (float) atlasHeight);
+						}
+					}
+				}
+			}
+		}
+	}
+	
 	private void render() {
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT ); // clear frame buffer
 		
@@ -297,35 +346,40 @@ public class Window {
 		
 		// Create a bunch of cubes
 		glActiveTexture(GL_TEXTURE0);
-		
-		for (int x = 0; x < world.length; x++) {
-			for (int y = 0; y < world.height; y++) {
-				for (int z = 0; z < world.width; z++) {
-					if (world.positions[x][y][z].type != Block.BlockType.AIR
-							&& world.blockAdjacentToAir(x, y, z)) {
-						world.positions[x][y][z].setTexture();
-						Matrix4f model = new Matrix4f();
-						model.translate(x - (int) world.length / 2, y - (int) world.height / 2, z - (int) world.width / 2);
-						shader.setMat4("model", model);
-						glDrawArrays(GL_TRIANGLES, 0, 36);
-					}
-				}
-			}
-		}
+		Texture tempBlockTexture = Block.blockAtlas;
+		tempBlockTexture.bind();
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+		glDrawArrays(GL_TRIANGLES, 0, blockVertices.size() / 8);
 	}
 	
 	private void processInput() {
-		if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) {
-			camera.processKeyboard(Camera.MovementDirection.FORWARD, deltaTime);
+		float multiplier = 1.0f;
+		if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS) {
+			multiplier = 0.5f;
 		}
-		if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) {
-			camera.processKeyboard(Camera.MovementDirection.BACKWARD, deltaTime);
+		
+		Boolean wPressed = glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS;
+		Boolean sPressed = glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS;
+		Boolean dPressed = glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS;
+		Boolean aPressed = glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS;
+		
+		// Slow down diagonal movement
+		if ((wPressed || sPressed) && (dPressed || aPressed)) {
+			multiplier *= 0.71f;
 		}
-		if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) {
-			camera.processKeyboard(Camera.MovementDirection.RIGHT, deltaTime);
+		
+		if (wPressed) {
+			camera.processKeyboard(Camera.MovementDirection.FORWARD, deltaTime, multiplier);
 		}
-		if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) {
-			camera.processKeyboard(Camera.MovementDirection.LEFT, deltaTime);
+		if (sPressed) {
+			camera.processKeyboard(Camera.MovementDirection.BACKWARD, deltaTime, multiplier);
+		}
+		if (dPressed) {
+			camera.processKeyboard(Camera.MovementDirection.RIGHT, deltaTime, multiplier);
+		}
+		if (aPressed) {
+			camera.processKeyboard(Camera.MovementDirection.LEFT, deltaTime, multiplier);
 		}
 	}
 }

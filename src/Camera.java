@@ -68,8 +68,8 @@ public class Camera {
 		Front.normalize();
 	}
 	
-	public void processKeyboard(MovementDirection direction, float deltaTime) {
-		float cameraSpeed = SPEED * deltaTime / 1000.0f;
+	public void processKeyboard(MovementDirection direction, float deltaTime, float multiplier) {
+		float cameraSpeed = SPEED * deltaTime / 1000.0f * multiplier;
 		Vector3f cameraVelocity = new Vector3f();
 		if (direction == MovementDirection.FORWARD) {
 			Front.mul(cameraSpeed, cameraVelocity);
@@ -94,8 +94,7 @@ public class Camera {
 			Position.sub(cameraVelocity);
 		}
 		
-		updateCameraVectors();
-		// Position.setComponent(1, 0.0f);		
+		updateCameraVectors();	
 	}
 	
 	public void processMouseScroll(float yOffset) {

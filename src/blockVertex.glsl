@@ -14,7 +14,7 @@ out vec3 normal;
 
 void main()
 {
-	gl_Position = perspective * view * model * vec4(aPos, 1.0);
+	gl_Position = perspective * view * vec4(aPos, 1.0);
 	texCoord = aTexCoord;
 	normal = aNormal;
 }

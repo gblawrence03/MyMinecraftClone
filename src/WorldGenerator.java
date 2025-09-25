@@ -20,14 +20,17 @@ public class WorldGenerator {
 		int layer1Seed = ran.nextInt(Integer.MAX_VALUE);
 		int layer2Seed = ran.nextInt(Integer.MAX_VALUE);
 		int layer3Seed = ran.nextInt(Integer.MAX_VALUE);
+		int layer4Seed = ran.nextInt(Integer.MAX_VALUE);
 		
-		int layer1Wavelength = 80;
-		int layer2Wavelength = 40;
-		int layer3Wavelength = 20;
+		int layer1Wavelength = 320;
+		int layer2Wavelength = 120;
+		int layer3Wavelength = 40;
+		int layer4Wavelength = 20;
 		
-		float layer1Amplitude = 0.6f;
-		float layer2Amplitude = 0.3f;
+		float layer1Amplitude = 0.8f;
+		float layer2Amplitude = 0.4f;
 		float layer3Amplitude = 0.2f;
+		float layer4Amplitude = 0.1f;
 		
 		positions = new Block[length][height][width];
 		
@@ -39,12 +42,14 @@ public class WorldGenerator {
 				float layer1 = OpenSimplex2.noise2(layer1Seed, (float) x / layer1Wavelength, (float) z / layer1Wavelength) + 1;
 				float layer2 = OpenSimplex2.noise2(layer2Seed, (float) x / layer2Wavelength, (float) z / layer2Wavelength) + 1;
 				float layer3 = OpenSimplex2.noise2(layer3Seed, (float) x / layer3Wavelength, (float) z / layer3Wavelength) + 1;
+				float layer4 = OpenSimplex2.noise2(layer4Seed, (float) x / layer4Wavelength, (float) z / layer4Wavelength) + 1;
 				
 				// Generate height, round to int
 				double y = layer1Amplitude * layer1
 						+  layer2Amplitude * layer2
-						+  layer3Amplitude * layer3;
-				y = y / (2 * (layer1Amplitude + layer2Amplitude + layer3Amplitude)); // halve because y value will be between 0 and 2 
+						+  layer3Amplitude * layer3
+						+ layer4Amplitude * layer4;
+				y = y / (2 * (layer1Amplitude + layer2Amplitude + layer3Amplitude + layer4Amplitude)); // halve because y value will be between 0 and 2 
 				y = Math.pow(y, 1.5);
 				y *= height;
 				int yPos = (int) Math.floor(y);
