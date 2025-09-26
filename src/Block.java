@@ -107,11 +107,11 @@ public class Block {
 		textureMap = new HashMap<>();
 		// Grass
 		textureMap.put(new TexIndex(BlockType.GRASS, BlockFace.UP), 1);
-		textureMap.put(new TexIndex(BlockType.GRASS, BlockFace.DOWN), 1);
-		textureMap.put(new TexIndex(BlockType.GRASS, BlockFace.NORTH), 1);
-		textureMap.put(new TexIndex(BlockType.GRASS, BlockFace.SOUTH), 1);
-		textureMap.put(new TexIndex(BlockType.GRASS, BlockFace.WEST), 1);
-		textureMap.put(new TexIndex(BlockType.GRASS, BlockFace.EAST), 1);
+		textureMap.put(new TexIndex(BlockType.GRASS, BlockFace.DOWN), 4);
+		textureMap.put(new TexIndex(BlockType.GRASS, BlockFace.NORTH), 5);
+		textureMap.put(new TexIndex(BlockType.GRASS, BlockFace.SOUTH), 5);
+		textureMap.put(new TexIndex(BlockType.GRASS, BlockFace.WEST), 5);
+		textureMap.put(new TexIndex(BlockType.GRASS, BlockFace.EAST), 5);
 		// Stone
 		textureMap.put(new TexIndex(BlockType.STONE, BlockFace.UP), 2);
 		textureMap.put(new TexIndex(BlockType.STONE, BlockFace.DOWN), 2);
