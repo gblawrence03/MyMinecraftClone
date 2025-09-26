@@ -7,11 +7,13 @@ public class WorldGenerator {
 	
 	int length, width, height, seaLevel;
 	
+	int yScale = 50;
+	
 	public WorldGenerator(int seed, int length, int width, int height) {
 		this.length = length;
 		this.width = width;
 		this.height = height;
-		this.seaLevel = (int) (height / 3);
+		this.seaLevel = (int) (yScale / 5);
 		
 		// Generate seeds
 		
@@ -21,16 +23,19 @@ public class WorldGenerator {
 		int layer2Seed = ran.nextInt(Integer.MAX_VALUE);
 		int layer3Seed = ran.nextInt(Integer.MAX_VALUE);
 		int layer4Seed = ran.nextInt(Integer.MAX_VALUE);
+		int controlSeed = ran.nextInt(Integer.MAX_VALUE);
 		
-		int layer1Wavelength = 320;
-		int layer2Wavelength = 120;
-		int layer3Wavelength = 40;
-		int layer4Wavelength = 20;
+		float controlWavelength = 300f; // Controls how volatile the terrain in a given area is 
+		int layer1Wavelength = 160; // Base height layer 
+		int layer2Wavelength = 40; // Second base height layer
+		int layer3Wavelength = 5; // To add small variations regardless of location
+		int layer4Wavelength = 10; // Small peaks in high volalility areas
 		
-		float layer1Amplitude = 0.8f;
+		float controlAmplitude = 0.5f;
+		float layer1Amplitude = 0.6f;
 		float layer2Amplitude = 0.4f;
-		float layer3Amplitude = 0.2f;
-		float layer4Amplitude = 0.1f;
+		float layer3Amplitude = 0.005f;
+		float layer4Amplitude = 0.15f;
 		
 		positions = new Block[length][height][width];
 		
@@ -39,31 +44,44 @@ public class WorldGenerator {
 			for(int z = 0; z < width; z++) {
 				
 				// Get noise values
-				float layer1 = OpenSimplex2.noise2(layer1Seed, (float) x / layer1Wavelength, (float) z / layer1Wavelength) + 1;
-				float layer2 = OpenSimplex2.noise2(layer2Seed, (float) x / layer2Wavelength, (float) z / layer2Wavelength) + 1;
-				float layer3 = OpenSimplex2.noise2(layer3Seed, (float) x / layer3Wavelength, (float) z / layer3Wavelength) + 1;
-				float layer4 = OpenSimplex2.noise2(layer4Seed, (float) x / layer4Wavelength, (float) z / layer4Wavelength) + 1;
+				float control = OpenSimplex2.noise2(controlSeed, x / controlWavelength, z / controlWavelength) * controlAmplitude + 0.5f;
+				float layer1 = OpenSimplex2.noise2(layer1Seed, (float) x / layer1Wavelength, (float) z / layer1Wavelength) * 0.5f + 0.5f;
+				float layer2 = OpenSimplex2.noise2(layer2Seed, (float) x / layer2Wavelength, (float) z / layer2Wavelength) * 0.5f + 0.5f;
+				float layer3 = OpenSimplex2.noise2(layer3Seed, (float) x / layer3Wavelength, (float) z / layer3Wavelength) * 0.5f + 0.5f;
+				float layer4 = OpenSimplex2.noise2(layer4Seed, (float) x / layer4Wavelength, (float) z / layer4Wavelength) * 0.5f + 0.5f;
 				
 				// Generate height, round to int
 				double y = layer1Amplitude * layer1
-						+  layer2Amplitude * layer2
-						+  layer3Amplitude * layer3
-						+ layer4Amplitude * layer4;
-				y = y / (2 * (layer1Amplitude + layer2Amplitude + layer3Amplitude + layer4Amplitude)); // halve because y value will be between 0 and 2 
+						+  layer2Amplitude * layer2 * Math.pow(control, 2)
+						+  layer3Amplitude * layer3 
+						+ layer4Amplitude * layer4 * Math.pow(control, 10); 
+				y = y / (layer1Amplitude + layer2Amplitude + layer3Amplitude + layer4Amplitude); // Scale to between 0 and 1
 				y = Math.pow(y, 1.5);
-				y *= height;
+				y *= yScale;
 				int yPos = (int) Math.floor(y);
 				
-				// Fill with stone till height, air for the rest
-				for (int i = 0; i < yPos; i++) {
+				// Ensure it doesn't exceed the height limit 
+				yPos = Math.min(height - 1, yPos);
+				
+				int i = 0;
+				// Fill with stone till height
+				for (; i < yPos - 2; i++) {
 					positions[x][i][z] = new Block(Block.BlockType.STONE);
 				}
-				positions[x][yPos][z] = new Block(Block.BlockType.GRASS);
-				for (int i = yPos + 1; i < height; i++) {
-					positions[x][i][z] = new Block(Block.BlockType.AIR);
+				// then dirt
+				for (; i < yPos; i++) {
+					positions[x][i][z] = new Block(Block.BlockType.DIRT);
 				}
-				for (int i = yPos + 1; i <= seaLevel; i++) {
+				// then grass
+				positions[x][yPos][z] = new Block(Block.BlockType.GRASS);
+				i++;
+				// then water up to sea level
+				for (; i <= seaLevel; i++) {
 					positions[x][i][z] = new Block(Block.BlockType.WATER);
+				}
+				// then air
+				for (; i < height; i++) {
+					positions[x][i][z] = new Block(Block.BlockType.AIR);
 				}
 			}
 		}

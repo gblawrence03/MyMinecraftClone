@@ -6,7 +6,8 @@ public class Block {
 		AIR,
 		GRASS,
 		STONE,
-		WATER
+		WATER,
+		DIRT
 	}
 	
 	public enum BlockFace {
@@ -126,6 +127,13 @@ public class Block {
 		textureMap.put(new TexIndex(BlockType.WATER, BlockFace.SOUTH), 3);
 		textureMap.put(new TexIndex(BlockType.WATER, BlockFace.WEST), 3);
 		textureMap.put(new TexIndex(BlockType.WATER, BlockFace.EAST), 3);
+		// Dirt
+		textureMap.put(new TexIndex(BlockType.DIRT, BlockFace.UP), 4);
+		textureMap.put(new TexIndex(BlockType.DIRT, BlockFace.DOWN), 4);
+		textureMap.put(new TexIndex(BlockType.DIRT, BlockFace.NORTH), 4);
+		textureMap.put(new TexIndex(BlockType.DIRT, BlockFace.SOUTH), 4);
+		textureMap.put(new TexIndex(BlockType.DIRT, BlockFace.WEST), 4);
+		textureMap.put(new TexIndex(BlockType.DIRT, BlockFace.EAST), 4);
 	}
 	
 	public BlockType type;

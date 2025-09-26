@@ -214,11 +214,11 @@ public class Window {
 		
 		glBindVertexArray(VAO);
 		
-		String worldSeedString = "thisisatest";
+		String worldSeedString = "DSBHJKAAS";
 		int worldSeed = worldSeedString.hashCode();
 		logger.info("Generating world. Seed for the world generator: \"" + worldSeedString + "\" -> " + worldSeed);
 
-		world = new WorldGenerator(worldSeed, 500, 500, 50);
+		world = new WorldGenerator(worldSeed, 600, 600, 50);
 		generateBlockVertices();
 		FloatBuffer verticesBuffer = MemoryUtil.memAllocFloat(blockVertices.size());
 		
@@ -339,8 +339,15 @@ public class Window {
 	
 	private void processInput() {
 		float multiplier = 1.0f;
+		
+		// Slow movement
 		if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS) {
 			multiplier = 0.5f;
+		}
+		
+		// Fast movement
+		if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS) {
+			multiplier = 3f;
 		}
 		
 		Boolean wPressed = glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS;
