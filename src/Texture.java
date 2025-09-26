@@ -17,9 +17,10 @@ import java.nio.*;
 public class Texture {
 	
 	public int ID;
+	public int width, height;
 	
 	public Texture( String imagePath ) {
-		int width, height, channels;
+		int channels;
 		ByteBuffer imageBuffer;
 		
 		Logger logger;

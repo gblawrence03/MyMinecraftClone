@@ -214,7 +214,7 @@ public class Window {
 		
 		glBindVertexArray(VAO);
 		
-		String worldSeedString = "hello world!";
+		String worldSeedString = "thisisatest";
 		int worldSeed = worldSeedString.hashCode();
 		logger.info("Generating world. Seed for the world generator: \"" + worldSeedString + "\" -> " + worldSeed);
 
@@ -300,30 +300,14 @@ public class Window {
 				for (int z = 0; z < world.width; z++) {
 					if (world.positions[x][y][z].type != Block.BlockType.AIR
 						&& world.blockAdjacentToAir(x, y, z)) {
-						for (int i = 0; i < 36; i++) {
-							// Positions 
-							float xPos = Block.vertices[i * 8 + 0];
-							float yPos = Block.vertices[i * 8 + 1];
-							float zPos = Block.vertices[i * 8 + 2];
-							blockVertices.add(xPos + x - (int) world.length / 2);
-							blockVertices.add(yPos + y - (int) world.height / 2);
-							blockVertices.add(zPos + z - (int) world.width / 2);
-							// Normals 
-							blockVertices.add(Block.vertices[i * 8 + 3]);
-							blockVertices.add(Block.vertices[i * 8 + 4]);
-							blockVertices.add(Block.vertices[i * 8 + 5]);
+						
+						ArrayList<Float> vertices = world.positions[x][y][z].getVertexArray(
+									x - (int) world.length / 2, 
+									y - (int) world.height / 2, 
+									z - (int) world.width / 2);
 							
-							int ordinal = world.positions[x][y][z].type.ordinal();
+						blockVertices.addAll(vertices);
 							
-							// Textures
-							int atlasWidth = 2;
-							int atlasHeight = 2;
-							int atlasYPos = ordinal / atlasWidth;
-							int atlasXPos = ordinal % atlasHeight;
-							
-							blockVertices.add(((float) atlasXPos + Block.vertices[i * 8 + 6]) / (float) atlasWidth);
-							blockVertices.add(1 - ((float) atlasYPos + Block.vertices[i * 8 + 7]) / (float) atlasHeight);
-						}
 					}
 				}
 			}
