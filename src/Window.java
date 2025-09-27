@@ -245,12 +245,25 @@ public class Window {
 		
 		glBindVertexArray(VAO);
 		
-		String worldSeedString = "DSBHJKAAS";
+		// World generation
+		
+		String worldSeedString = "bloskasc";
 		int worldSeed = worldSeedString.hashCode();
 		logger.info("Generating world. Seed for the world generator: \"" + worldSeedString + "\" -> " + worldSeed);
-
+		
+		long startTime = System.currentTimeMillis();
 		world = new WorldGenerator(worldSeed, 600, 600, 50);
+		long endTime = System.currentTimeMillis();
+		
+		logger.info("World generation took " + (endTime - startTime) / 1000f + " seconds.");
+		
+		startTime = System.currentTimeMillis();
 		generateBlockVertices();
+		endTime = System.currentTimeMillis();
+		
+		logger.info("Generating vertices took " + (endTime - startTime) / 1000f + " seconds.");
+		
+		startTime = System.currentTimeMillis();
 		FloatBuffer verticesBuffer = MemoryUtil.memAllocFloat(blockVertices.size());
 		
 		for (int i = 0; i < blockVertices.size(); i++) {
@@ -258,6 +271,8 @@ public class Window {
 		}
 		
 		verticesBuffer.flip();
+		endTime = System.currentTimeMillis();
+		logger.info("Sending vertices took " + (endTime - startTime) / 1000f + " seconds.");
 		
 	
 		Vector3f cameraPos = new Vector3f(0.0f, 5.0f, 0.0f);

@@ -63,7 +63,7 @@ public class WorldGenerator {
 				
 				// Generate height, round to int
 				double y = layer1Amplitude * layer1
-						+  layer2Amplitude * layer2
+						+  layer2Amplitude * layer2 * variation
 						+  layer3Amplitude * layer3 * variation 
 						+ layer4Amplitude * layer4 * variation
 						+ continental * continentalStrength * continentalDampen * continentalDampen; 
