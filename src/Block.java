@@ -1,5 +1,7 @@
 import java.util.ArrayList;
+import java.util.EnumMap;
 import java.util.HashMap;
+import java.util.Map;
 
 public class Block {
 	public enum BlockType {
@@ -19,121 +21,117 @@ public class Block {
 		UP
 	}
 	
-	static private class TexIndex {
-		private BlockType blockType;
-		private BlockFace blockFace;
-		
-		public TexIndex(BlockType blockType, BlockFace blockFace) {
-			this.blockType = blockType;
-			this.blockFace = blockFace; 
+	static private class TilePos {
+		public int x;
+		public int y;
+		TilePos(int x, int y) {
+			this.x = x;
+			this.y = y;
 		}
-		
-		@Override
-		public int hashCode() {
-			return this.blockType.ordinal() ^ this.blockFace.ordinal();
-		}
-		
-		@Override
-	    public boolean equals(Object obj) {
-	        if (this == obj)
-	            return true;
-	        if (obj == null)
-	            return false;
-	        if (getClass() != obj.getClass())
-	            return false;
-	        TexIndex other = (TexIndex) obj;
-	        if (blockType != other.blockType)
-	            return false;
-	        if (blockFace != other.blockFace)
-	            return false;
-	        return true;
-	    }
 	}
 	
 	public static float[] vertices = {
-			// positions 		 // normals 		// texture coords
-			-0.5f, 	-0.5f, -0.5f, 0.0f, 0.0f, -1.0f, 1.0f, 1.0f,
-			0.5f, 	-0.5f, -0.5f, 0.0f, 0.0f, -1.0f, 0.0f, 1.0f,
-			0.5f, 	0.5f, -0.5f, 0.0f, 0.0f, -1.0f, 0.0f, 0.0f,
-			0.5f, 	0.5f, -0.5f, 0.0f, 0.0f, -1.0f, 0.0f, 0.0f,
-			-0.5f, 	0.5f, -0.5f, 0.0f, 0.0f, -1.0f, 1.0f, 0.0f,
-			-0.5f, 	-0.5f, -0.5f, 0.0f, 0.0f, -1.0f, 1.0f, 1.0f,
+			// positions 		
+			-0.5f, -0.5f, -0.5f,
+			 0.5f, -0.5f, -0.5f,
+			 0.5f, 	0.5f, -0.5f,
+			 0.5f, 	0.5f, -0.5f,
+			-0.5f, 	0.5f, -0.5f,
+			-0.5f, -0.5f, -0.5f, 
 			
-			-0.5f, 	-0.5f, 0.5f, 0.0f, 0.0f, 1.0f, 0.0f, 1.0f,
-			0.5f, 	-0.5f, 0.5f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f,
-			0.5f, 	0.5f, 0.5f, 0.0f, 0.0f, 1.0f, 1.0f, 0.0f,
-			0.5f, 	0.5f, 0.5f, 0.0f, 0.0f, 1.0f, 1.0f, 0.0f,
-			-0.5f, 	0.5f, 0.5f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f,
-			-0.5f, 	-0.5f, 0.5f, 0.0f, 0.0f, 1.0f, 0.0f, 1.0f,
+			-0.5f, -0.5f,  0.5f, 
+			 0.5f, -0.5f,  0.5f, 
+			 0.5f, 	0.5f,  0.5f, 
+			 0.5f, 	0.5f,  0.5f,
+			-0.5f, 	0.5f,  0.5f, 
+			-0.5f, -0.5f,  0.5f, 
 			
-			-0.5f, 	0.5f, 0.5f, -1.0f, 0.0f, 0.0f, 1.0f, 0.0f,
-			-0.5f, 	0.5f, -0.5f, -1.0f, 0.0f, 0.0f, 0.0f, 0.0f,
-			-0.5f, 	-0.5f, -0.5f, -1.0f, 0.0f, 0.0f, 0.0f, 1.0f,
-			-0.5f, 	-0.5f, -0.5f, -1.0f, 0.0f, 0.0f, 0.0f, 1.0f,
-			-0.5f, 	-0.5f, 0.5f, -1.0f, 0.0f, 0.0f, 1.0f, 1.0f,
-			-0.5f, 	0.5f, 0.5f, -1.0f, 0.0f, 0.0f, 1.0f, 0.0f,
+			-0.5f, 	0.5f,  0.5f, 
+			-0.5f, 	0.5f, -0.5f,
+			-0.5f, -0.5f, -0.5f,
+			-0.5f, -0.5f, -0.5f, 
+			-0.5f, -0.5f,  0.5f, 
+			-0.5f, 	0.5f,  0.5f,
 			
-			0.5f, 	0.5f, 0.5f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f,
-			0.5f, 	0.5f, -0.5f, 1.0f, 0.0f, 0.0f, 1.0f, 0.0f,
-			0.5f, 	-0.5f, -0.5f, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f,
-			0.5f, 	-0.5f, -0.5f, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f,
-			0.5f, 	-0.5f, 0.5f, 1.0f, 0.0f, 0.0f, 0.0f, 1.0f,
-			0.5f, 	0.5f, 0.5f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f,
+			 0.5f, 	0.5f,  0.5f,
+			 0.5f, 	0.5f, -0.5f, 
+			 0.5f, -0.5f, -0.5f, 
+			 0.5f, -0.5f, -0.5f, 
+			 0.5f, -0.5f,  0.5f, 
+			 0.5f, 	0.5f,  0.5f, 
 			
-			-0.5f, 	-0.5f, -0.5f, 0.0f, -1.0f, 0.0f, 0.0f, 1.0f,
-			0.5f, 	-0.5f, -0.5f, 0.0f, -1.0f, 0.0f, 1.0f, 1.0f,
-			0.5f, 	-0.5f, 0.5f, 0.0f, -1.0f, 0.0f, 1.0f, 0.0f,
-			0.5f, 	-0.5f, 0.5f, 0.0f, -1.0f, 0.0f, 1.0f, 0.0f,
-			-0.5f, -0.5f, 0.5f, 0.0f, -1.0f, 0.0f, 0.0f, 0.0f,
-			-0.5f, -0.5f, -0.5f, 0.0f, -1.0f, 0.0f, 0.0f, 1.0f,
+			-0.5f, -0.5f, -0.5f, 
+			 0.5f, -0.5f, -0.5f,
+			 0.5f, -0.5f,  0.5f, 
+			 0.5f, -0.5f,  0.5f, 
+			-0.5f, -0.5f,  0.5f, 
+			-0.5f, -0.5f, -0.5f,
 			
-			-0.5f, 0.5f, -0.5f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f,
-			0.5f, 0.5f, -0.5f, 0.0f, 1.0f, 0.0f, 1.0f, 1.0f,
-			0.5f, 0.5f, 0.5f, 0.0f, 1.0f, 0.0f, 1.0f, 0.0f,
-			0.5f, 0.5f, 0.5f, 0.0f, 1.0f, 0.0f, 1.0f, 0.0f,
-			-0.5f, 0.5f, 0.5f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f,
-			-0.5f, 0.5f, -0.5f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f
+			-0.5f,  0.5f, -0.5f, 
+			 0.5f,  0.5f, -0.5f, 
+			 0.5f,  0.5f,  0.5f, 
+			 0.5f,  0.5f,  0.5f,
+			-0.5f,  0.5f,  0.5f, 
+			-0.5f,  0.5f, -0.5f, 
 	};
 	
-	public static HashMap<TexIndex, Integer> textureMap;
 	public static Texture blockAtlas = new Texture("data/blocks.png");
+	public static final Map<BlockType, TilePos[]> atlasMap = new EnumMap<>(BlockType.class);
 	
 	public static int atlasWidth;
 	public static int atlasHeight;
+	public static int[] atlasIndices; // Atlas texture lookup
 
 	static {
 		atlasWidth = blockAtlas.width / 16;
 		atlasHeight = blockAtlas.height / 16;
 		
-		textureMap = new HashMap<>();
-		// Grass
-		textureMap.put(new TexIndex(BlockType.GRASS, BlockFace.UP), 1);
-		textureMap.put(new TexIndex(BlockType.GRASS, BlockFace.DOWN), 4);
-		textureMap.put(new TexIndex(BlockType.GRASS, BlockFace.NORTH), 5);
-		textureMap.put(new TexIndex(BlockType.GRASS, BlockFace.SOUTH), 5);
-		textureMap.put(new TexIndex(BlockType.GRASS, BlockFace.WEST), 5);
-		textureMap.put(new TexIndex(BlockType.GRASS, BlockFace.EAST), 5);
-		// Stone
-		textureMap.put(new TexIndex(BlockType.STONE, BlockFace.UP), 2);
-		textureMap.put(new TexIndex(BlockType.STONE, BlockFace.DOWN), 2);
-		textureMap.put(new TexIndex(BlockType.STONE, BlockFace.NORTH), 2);
-		textureMap.put(new TexIndex(BlockType.STONE, BlockFace.SOUTH), 2);
-		textureMap.put(new TexIndex(BlockType.STONE, BlockFace.WEST), 2);
-		textureMap.put(new TexIndex(BlockType.STONE, BlockFace.EAST), 2);
-		// Water
-		textureMap.put(new TexIndex(BlockType.WATER, BlockFace.UP), 3);
-		textureMap.put(new TexIndex(BlockType.WATER, BlockFace.DOWN), 3);
-		textureMap.put(new TexIndex(BlockType.WATER, BlockFace.NORTH), 3);
-		textureMap.put(new TexIndex(BlockType.WATER, BlockFace.SOUTH), 3);
-		textureMap.put(new TexIndex(BlockType.WATER, BlockFace.WEST), 3);
-		textureMap.put(new TexIndex(BlockType.WATER, BlockFace.EAST), 3);
-		// Dirt
-		textureMap.put(new TexIndex(BlockType.DIRT, BlockFace.UP), 4);
-		textureMap.put(new TexIndex(BlockType.DIRT, BlockFace.DOWN), 4);
-		textureMap.put(new TexIndex(BlockType.DIRT, BlockFace.NORTH), 4);
-		textureMap.put(new TexIndex(BlockType.DIRT, BlockFace.SOUTH), 4);
-		textureMap.put(new TexIndex(BlockType.DIRT, BlockFace.WEST), 4);
-		textureMap.put(new TexIndex(BlockType.DIRT, BlockFace.EAST), 4);
+		atlasMap.put(BlockType.AIR, new TilePos[] {
+				new TilePos(0, 0), new TilePos(0, 0),
+				new TilePos(0, 0), new TilePos(0, 0),
+				new TilePos(0, 0), new TilePos(0, 0)
+		});
+		
+		// Order of faces: SOUTH, NORTH, WEST, EAST, DOWN, UP
+		atlasMap.put(BlockType.GRASS, new TilePos[] {
+			new TilePos(5, 0),
+			new TilePos(5, 0),
+			new TilePos(5, 0),
+			new TilePos(5, 0),
+			new TilePos(4, 0),
+			new TilePos(1, 0)
+		});
+		
+		atlasMap.put(BlockType.DIRT, new TilePos[] {
+			new TilePos(4, 0), new TilePos(4, 0),
+			new TilePos(4, 0), new TilePos(4, 0),
+			new TilePos(4, 0), new TilePos(4, 0)
+		});
+		
+		atlasMap.put(BlockType.STONE, new TilePos[] {
+			new TilePos(2, 0), new TilePos(2, 0),
+			new TilePos(2, 0), new TilePos(2, 0),
+			new TilePos(2, 0), new TilePos(2, 0)
+		});
+
+		atlasMap.put(BlockType.WATER, new TilePos[] {
+			new TilePos(3, 0), new TilePos(3, 0),
+			new TilePos(3, 0), new TilePos(3, 0),
+			new TilePos(3, 0), new TilePos(3, 0)
+		});
+		
+		int numBlockTypes = BlockType.values().length; 
+		atlasIndices = new int[numBlockTypes * 6 * 2]; // 6 faces, x and y per face
+		
+		for (BlockType type : BlockType.values()) {
+			TilePos[] tiles = atlasMap.get(type);
+			int baseIndex = type.ordinal() * 12;
+			
+			for (int f = 0; f < 6; f++) {
+				atlasIndices[baseIndex + f*2] = tiles[f].x;
+				atlasIndices[baseIndex + f*2 + 1] = tiles[f].y;
+			}
+		}
 	}
 	
 	public BlockType type;
@@ -142,15 +140,16 @@ public class Block {
 		this.type = type;
 	}
 	
-	public void getFaceArray(ArrayList<Integer> faces) {
+	public void getFaceArray(ArrayList<Integer> blockFaces) {
 		for (int i = 0; i < 36; i++) {
-			faces.add(i / 6);
+			blockFaces.add(type.ordinal());
+			blockFaces.add(i);
 		}
 	}
 	
 	public void getVertexArray(ArrayList<Float> vertices, float xOffset, float yOffset, float zOffset) {		
 		for (int i = 0; i < 36; i++) {
-			int vertexOffset = i * 8;
+			int vertexOffset = i * 3;
 			// Positions 
 			float xPos = Block.vertices[vertexOffset + 0];
 			float yPos = Block.vertices[vertexOffset + 1];
@@ -158,20 +157,6 @@ public class Block {
 			vertices.add(xOffset + xPos);
 			vertices.add(yOffset + yPos);
 			vertices.add(zOffset + zPos);
-			// FaceID 
-			// vertices.add((float) (i / 6));
-			
-			// Get the face and texture based on the index of the vertex (groups of 6 vertices)
-			BlockFace face = BlockFace.values()[i / 6];
-			int atlasIndex = textureMap.get(new TexIndex(type, face));
-			
-			// Calculate texture coordinates
-
-			int atlasXPos = atlasIndex / atlasHeight;
-			int atlasYPos = atlasIndex % atlasWidth;
-			
-			vertices.add(((float) atlasXPos + Block.vertices[vertexOffset + 6]) / (float) atlasWidth);
-			vertices.add(1 - ((float) atlasYPos + Block.vertices[vertexOffset + 7]) / (float) atlasHeight);
 		}
 	}
 }

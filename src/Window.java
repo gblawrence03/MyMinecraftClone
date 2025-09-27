@@ -39,7 +39,7 @@ public class Window {
 	private WorldGenerator world;
 	
 	private int VAO;
-	private int faceVBO;
+	private int blockFaceVBO;
 	private int VBO;
 	private int EBO;
 	
@@ -72,7 +72,7 @@ public class Window {
 	private ArrayList<Float> blockVertices = new ArrayList<Float>();
 	private ArrayList<Integer> blockFaces = new ArrayList<Integer>();
 	private FloatBuffer verticesBuffer;
-	private IntBuffer facesBuffer;
+	private IntBuffer blockFacesBuffer;
 	private GLFWVidMode vidmode;
 	
 	public static void main(String[] args) {
@@ -241,12 +241,12 @@ public class Window {
 		
 		// World generation
 		
-		String worldSeedString = "bloskasc";
+		String worldSeedString = "fsdfsdf";
 		int worldSeed = worldSeedString.hashCode();
 		logger.info("Generating world. Seed for the world generator: \"" + worldSeedString + "\" -> " + worldSeed);
 		
 		long startTime = System.currentTimeMillis();
-		world = new WorldGenerator(worldSeed, 600, 600, 50);
+		world = new WorldGenerator(worldSeed, 700, 700, 50);
 		long endTime = System.currentTimeMillis();
 		
 		logger.info("World generation took " + (endTime - startTime) / 1000f + " seconds.");
@@ -259,18 +259,18 @@ public class Window {
 		
 		startTime = System.currentTimeMillis();
 		verticesBuffer = MemoryUtil.memAllocFloat(blockVertices.size());
-		facesBuffer = MemoryUtil.memAllocInt(blockFaces.size());
+		blockFacesBuffer = MemoryUtil.memAllocInt(blockFaces.size());
 		
 		for (int i = 0; i < blockVertices.size(); i++) {
 			verticesBuffer.put(blockVertices.get(i));
 		}
 		
 		for (int i = 0; i < blockFaces.size(); i++) {
-			facesBuffer.put(blockFaces.get(i));
+			blockFacesBuffer.put(blockFaces.get(i));
 		}
 		
 		verticesBuffer.flip();
-		facesBuffer.flip();
+		blockFacesBuffer.flip();
 		endTime = System.currentTimeMillis();
 		logger.info("Sending vertices took " + (endTime - startTime) / 1000f + " seconds.");
 		
@@ -287,7 +287,7 @@ public class Window {
 		
 		VAO = glGenVertexArrays();
 		VBO = glGenBuffers();
-		faceVBO = glGenBuffers();
+		blockFaceVBO = glGenBuffers();
 		EBO = glGenBuffers();
 		
 		glBindVertexArray(VAO);
@@ -298,17 +298,32 @@ public class Window {
 
 		// Set up VAO
 		// Position
-		glVertexAttribPointer(0, 3, GL_FLOAT, false, 5 * FLOAT_BYTES, 0);
+		glVertexAttribPointer(0, 3, GL_FLOAT, false, 3 * FLOAT_BYTES, 0);
 		glEnableVertexAttribArray(0);
-
-		// Texture
-		glVertexAttribPointer(2, 2, GL_FLOAT, false, 5 * FLOAT_BYTES, (3 * FLOAT_BYTES));
+		
+		glBindBuffer(GL_ARRAY_BUFFER, blockFaceVBO);
+		glBufferData(GL_ARRAY_BUFFER, blockFacesBuffer, GL_STATIC_DRAW);
+		glVertexAttribIPointer(1, 1, GL_INT, 2 * Integer.BYTES, 0);
+		glEnableVertexAttribArray(1);
+		glVertexAttribIPointer(2, 1, GL_INT, 2 * Integer.BYTES, Integer.BYTES);
 		glEnableVertexAttribArray(2);
 		
-		glBindBuffer(GL_ARRAY_BUFFER, faceVBO);
-		glBufferData(GL_ARRAY_BUFFER, facesBuffer, GL_STATIC_DRAW);
-		glVertexAttribIPointer(1, 1, GL_INT, 0, 0);
-		glEnableVertexAttribArray(1);
+		IntBuffer atlasIndicesBuffer = BufferUtils.createIntBuffer(Block.atlasIndices.length);
+		atlasIndicesBuffer.put(Block.atlasIndices).flip();
+		
+		int atlasIndicesVBO = glGenBuffers();
+		glBindBuffer(GL_TEXTURE_BUFFER, atlasIndicesVBO);
+		glBufferData(GL_TEXTURE_BUFFER, atlasIndicesBuffer, GL_STATIC_DRAW);
+		
+		int tex = glGenTextures();
+		glBindTexture(GL_TEXTURE_BUFFER, tex);
+		glTexBuffer(GL_TEXTURE_BUFFER, GL_R32I, atlasIndicesVBO);
+		glActiveTexture(GL_TEXTURE1);
+		glBindTexture(GL_TEXTURE_BUFFER, tex);
+		int loc = glGetUniformLocation(shader.ID, "atlasIndices");
+		glUniform1i(loc, 1);
+		
+		
 		
 		// important!
 		glEnable(GL_DEPTH_TEST);
@@ -325,8 +340,6 @@ public class Window {
 		long lastFrame = oldTime;
 		long frames = 0;
 		deltaTime = 0.0f;
-		
-		// world = new WorldGenerator(100, 100, 100, 10);
 		
 		while ( !glfwWindowShouldClose(window) ) {	
 			glfwSwapBuffers(window); // swap colour buffers
@@ -381,6 +394,8 @@ public class Window {
 		shader.setVec3("globalLightDir", new Vector3f(0.7f, -1.0f, 0.5f));
 		shader.setVec3("cameraDir", camera.Front);
 		shader.setVec3("cameraPos", camera.Position);
+		shader.setInt("atlasWidth", Block.atlasWidth);
+		shader.setInt("atlasHeight", Block.atlasHeight);
 		
 		// Create a bunch of cubes
 		glActiveTexture(GL_TEXTURE0);

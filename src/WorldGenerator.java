@@ -7,13 +7,14 @@ public class WorldGenerator {
 	
 	int length, width, height, seaLevel;
 	
-	int yScale = 60;
+	int yScale = 80;
+	int baseHeight = 15;
 	
 	public WorldGenerator(int seed, int length, int width, int height) {
 		this.length = length;
 		this.width = width;
 		this.height = height;
-		this.seaLevel = (int) (yScale / 5);
+		this.seaLevel = (int) (yScale / 4);
 		
 		// Generate seeds
 		
@@ -24,26 +25,28 @@ public class WorldGenerator {
 		int layer3Seed = ran.nextInt(Integer.MAX_VALUE);
 		int layer4Seed = ran.nextInt(Integer.MAX_VALUE);
 		int continentalSeed = ran.nextInt(Integer.MAX_VALUE);
+		int peaksSeed = ran.nextInt(Integer.MAX_VALUE);
 		int continentalDampenSeed = ran.nextInt(Integer.MAX_VALUE);
 		int variationSeed = ran.nextInt(Integer.MAX_VALUE);
 		
 		float continentalWavelength = 200f; // Controls another base height layer, for land/water/cliffs
+		float peaksWavelength = 200f;
 		float continentalDampenWavelength = 100f; // Used to dampen the continental factor to prevent long cliffs
 		float variationWavelength = 300f;
-		int layer1Wavelength = 120; // Base height layer 
-		int layer2Wavelength = 40; // Second base height layer
-		int layer3Wavelength = 20; // To add small variations regardless of location
-		int layer4Wavelength = 10; // Small peaks in high volalility areas
+		int layer1Wavelength = 240; // Base height layer 
+		int layer2Wavelength = 80; // Second base height layer
+		int layer3Wavelength = 40; // To add small variations regardless of location
+		int layer4Wavelength = 20; // Small peaks in high volalility areas
 		
-		float continentalStrength = 5f;
-		float layer1Amplitude = 6f;
-		float layer2Amplitude = 2f;
+		float continentalStrength = 6f;
+		float layer1Amplitude = 3f;
+		float layer2Amplitude = 1.5f;
 		float layer3Amplitude = 1f;
-		float layer4Amplitude = 0.5f;
+		float layer4Amplitude = 0.2f;
 		
 		// Should include 0 and 1 and be in order
-		float[] continentalIndexes = {0, 0.2f, 0.4f, 0.41f, 0.5f, 0.8f, 1};
-		float[] continentalValues = {0, 0.2f, 0.3f, 0.6f, 0.6f, 0.4f, 0.1f};
+		float[] continentalIndexes = {0, 0.2f, 0.4f, 0.41f, 0.6f, 0.8f, 1};
+		float[] continentalValues = {0, 0.2f, 0.2f, 0.4f, 0.4f, 0.3f, 0.1f};
 		
 		positions = new Block[length][height][width];
 		
@@ -55,6 +58,7 @@ public class WorldGenerator {
 				float continentalVal = OpenSimplex2.noise2(continentalSeed, x / continentalWavelength, z / continentalWavelength) * 0.5f + 0.5f;
 				float continentalDampen = OpenSimplex2.noise2(continentalDampenSeed, x / continentalDampenWavelength, z / continentalDampenWavelength) * 0.5f + 0.5f;
 				float continental = lerpSpline(continentalIndexes, continentalValues, continentalVal);
+				float peaks = OpenSimplex2.noise2(peaksSeed, x / peaksWavelength, z / peaksWavelength) * 0.5f + 0.5f;
 				float variation = OpenSimplex2.noise2(variationSeed, x / variationWavelength, z / variationWavelength) * 0.5f + 0.5f;
 				float layer1 = OpenSimplex2.noise2(layer1Seed, (float) x / layer1Wavelength, (float) z / layer1Wavelength) * 0.5f + 0.5f;
 				float layer2 = OpenSimplex2.noise2(layer2Seed, (float) x / layer2Wavelength, (float) z / layer2Wavelength) * 0.5f + 0.5f;
@@ -62,14 +66,15 @@ public class WorldGenerator {
 				float layer4 = OpenSimplex2.noise2(layer4Seed, (float) x / layer4Wavelength, (float) z / layer4Wavelength) * 0.5f + 0.5f;
 				
 				// Generate height, round to int
-				double y = layer1Amplitude * layer1
-						+  layer2Amplitude * layer2 * variation
-						+  layer3Amplitude * layer3 * variation 
+				double y = layer1Amplitude * layer1 
+						+  layer2Amplitude * layer2 * variation * peaks
+						+  layer3Amplitude * layer3 * variation * peaks
 						+ layer4Amplitude * layer4 * variation
-						+ continental * continentalStrength * continentalDampen * continentalDampen; 
+						+ continental * continentalStrength * continentalDampen * continentalDampen * continentalDampen; 
 				y = y / (layer1Amplitude + layer2Amplitude + layer3Amplitude + layer4Amplitude + continentalStrength); // Scale to between 0 and 1
-				y = Math.pow(y, 1.5);
+				y = Math.pow(y, 1.5f);
 				y *= yScale;
+				y += baseHeight;
 				int yPos = (int) Math.floor(y);
 				
 				// Ensure it doesn't exceed the height limit 
