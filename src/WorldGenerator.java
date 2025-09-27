@@ -7,7 +7,7 @@ public class WorldGenerator {
 	
 	int length, width, height, seaLevel;
 	
-	int yScale = 50;
+	int yScale = 60;
 	
 	public WorldGenerator(int seed, int length, int width, int height) {
 		this.length = length;
@@ -23,19 +23,27 @@ public class WorldGenerator {
 		int layer2Seed = ran.nextInt(Integer.MAX_VALUE);
 		int layer3Seed = ran.nextInt(Integer.MAX_VALUE);
 		int layer4Seed = ran.nextInt(Integer.MAX_VALUE);
-		int controlSeed = ran.nextInt(Integer.MAX_VALUE);
+		int continentalSeed = ran.nextInt(Integer.MAX_VALUE);
+		int continentalDampenSeed = ran.nextInt(Integer.MAX_VALUE);
+		int variationSeed = ran.nextInt(Integer.MAX_VALUE);
 		
-		float controlWavelength = 300f; // Controls how volatile the terrain in a given area is 
-		int layer1Wavelength = 160; // Base height layer 
+		float continentalWavelength = 200f; // Controls another base height layer, for land/water/cliffs
+		float continentalDampenWavelength = 100f; // Used to dampen the continental factor to prevent long cliffs
+		float variationWavelength = 300f;
+		int layer1Wavelength = 120; // Base height layer 
 		int layer2Wavelength = 40; // Second base height layer
-		int layer3Wavelength = 5; // To add small variations regardless of location
+		int layer3Wavelength = 20; // To add small variations regardless of location
 		int layer4Wavelength = 10; // Small peaks in high volalility areas
 		
-		float controlAmplitude = 0.5f;
-		float layer1Amplitude = 0.6f;
-		float layer2Amplitude = 0.4f;
-		float layer3Amplitude = 0.005f;
-		float layer4Amplitude = 0.15f;
+		float continentalStrength = 5f;
+		float layer1Amplitude = 6f;
+		float layer2Amplitude = 2f;
+		float layer3Amplitude = 1f;
+		float layer4Amplitude = 0.5f;
+		
+		// Should include 0 and 1 and be in order
+		float[] continentalIndexes = {0, 0.2f, 0.4f, 0.41f, 0.5f, 0.8f, 1};
+		float[] continentalValues = {0, 0.2f, 0.3f, 0.6f, 0.6f, 0.4f, 0.1f};
 		
 		positions = new Block[length][height][width];
 		
@@ -44,7 +52,10 @@ public class WorldGenerator {
 			for(int z = 0; z < width; z++) {
 				
 				// Get noise values
-				float control = OpenSimplex2.noise2(controlSeed, x / controlWavelength, z / controlWavelength) * controlAmplitude + 0.5f;
+				float continentalVal = OpenSimplex2.noise2(continentalSeed, x / continentalWavelength, z / continentalWavelength) * 0.5f + 0.5f;
+				float continentalDampen = OpenSimplex2.noise2(continentalDampenSeed, x / continentalDampenWavelength, z / continentalDampenWavelength) * 0.5f + 0.5f;
+				float continental = lerpSpline(continentalIndexes, continentalValues, continentalVal);
+				float variation = OpenSimplex2.noise2(variationSeed, x / variationWavelength, z / variationWavelength) * 0.5f + 0.5f;
 				float layer1 = OpenSimplex2.noise2(layer1Seed, (float) x / layer1Wavelength, (float) z / layer1Wavelength) * 0.5f + 0.5f;
 				float layer2 = OpenSimplex2.noise2(layer2Seed, (float) x / layer2Wavelength, (float) z / layer2Wavelength) * 0.5f + 0.5f;
 				float layer3 = OpenSimplex2.noise2(layer3Seed, (float) x / layer3Wavelength, (float) z / layer3Wavelength) * 0.5f + 0.5f;
@@ -52,10 +63,11 @@ public class WorldGenerator {
 				
 				// Generate height, round to int
 				double y = layer1Amplitude * layer1
-						+  layer2Amplitude * layer2 * Math.pow(control, 2)
-						+  layer3Amplitude * layer3 
-						+ layer4Amplitude * layer4 * Math.pow(control, 10); 
-				y = y / (layer1Amplitude + layer2Amplitude + layer3Amplitude + layer4Amplitude); // Scale to between 0 and 1
+						+  layer2Amplitude * layer2
+						+  layer3Amplitude * layer3 * variation 
+						+ layer4Amplitude * layer4 * variation
+						+ continental * continentalStrength * continentalDampen * continentalDampen; 
+				y = y / (layer1Amplitude + layer2Amplitude + layer3Amplitude + layer4Amplitude + continentalStrength); // Scale to between 0 and 1
 				y = Math.pow(y, 1.5);
 				y *= yScale;
 				int yPos = (int) Math.floor(y);
@@ -105,6 +117,20 @@ public class WorldGenerator {
 		if (positions[x][y][z + 1].type == Block.BlockType.AIR) return true;
 		
 		return false;
+	}
+	
+	// Splines for terrain shaping
+	private float lerpSpline(float[] indexes, float[] values, float index) {
+		int i;
+		for (i = 0; i < indexes.length; i++) {
+			if (index == indexes[i]) return values[i];
+			if (index <= indexes[i]) break;
+		}
+
+		// i - 1 is now the index of the first value we will interpolate from, i is the second
+		float distToIndex1 = index - indexes[i - 1];
+		float distBetween = indexes[i] - indexes[i - 1];
+		return values[i - 1] + (values[i] - values[i - 1])/distBetween * distToIndex1;
 	}
 }
 

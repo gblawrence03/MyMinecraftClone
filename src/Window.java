@@ -41,12 +41,15 @@ public class Window {
 	private int VAO;
 	private int VBO;
 	private int EBO;
-	private float lerp;
 	
 	private Logger logger;
 	
 	private int windowHeight;
 	private int windowWidth;
+	private int screenHeight;
+	private int screenWidth;
+	private int windowedHeight;
+	private int windowedWidth;
 	private float aspectRatio;
 	
 	private float lastX;
@@ -67,6 +70,7 @@ public class Window {
 	
 	private ArrayList<Float> blockVertices = new ArrayList<Float>();
 	private FloatBuffer verticesBuffer;
+	private GLFWVidMode vidmode;
 	
 	public static void main(String[] args) {
 		new Window().run();
@@ -89,6 +93,27 @@ public class Window {
 		glfwSetErrorCallback(null).free();
 	}
 	
+	private void centerWindow() {
+		// Center the window
+		try ( MemoryStack stack = stackPush() ) {
+			IntBuffer pWidth = stack.mallocInt(1);
+			IntBuffer pHeight = stack.mallocInt(1);
+			
+			// Get the window size
+			glfwGetWindowSize(window, pWidth, pHeight);
+			
+			// Get primary monitor resolution
+			// GLFWVidMode vidmode = glfwGetVideoMode(glfwGetPrimaryMonitor());
+			
+			// Center the window
+			glfwSetWindowPos(
+				window,
+				(vidmode.width() - pWidth.get(0)) / 2,
+				(vidmode.height() - pHeight.get(0)) / 2
+			);
+		}
+	}
+	
 	private void init() {
 		// Error callback prints error messages in System.err
 		GLFWErrorCallback.createPrint(System.err).set();
@@ -104,13 +129,20 @@ public class Window {
 		glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
 		glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 		
+		// Get primary monitor resolution
+		vidmode = glfwGetVideoMode(glfwGetPrimaryMonitor());
+		
 		// Create window
 		windowWidth = 1280;
 		windowHeight = 720;
+		screenWidth = vidmode.width();
+		screenHeight = vidmode.height();
+		
 		aspectRatio = (float) windowWidth / (float) windowHeight;
 		logger.info("Ratio: " + aspectRatio);
 		
 		window = glfwCreateWindow(windowWidth, windowHeight, "MyMinecraftClone", NULL, NULL);
+		centerWindow();
 		if (window == NULL ) throw new RuntimeException("Failed to create the GLFW window");
 		
 		glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
@@ -124,24 +156,42 @@ public class Window {
 		// in the render loop and check if escape has been pressed
 		glfwSetKeyCallback(window, (window, key, scancode, action, mods) -> {
 			if (key == GLFW_KEY_ESCAPE && action == GLFW_RELEASE)
-				glfwSetWindowShouldClose(window, true); // detected in rendering loop
+				glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
 			
-			if (key == GLFW_KEY_UP && action == GLFW_RELEASE) {
-				lerp += 0.1;
-				if (lerp > 1.0)
-					lerp = 1.0f;
-				shader.setFloat("lerp", lerp);
+			if (key == GLFW_KEY_F11 && action == GLFW_RELEASE) {
+				// Set to windowed
+				if (glfwGetWindowMonitor(window) != NULL) {
+					glfwSetWindowMonitor(window, NULL, 100, 100, windowedWidth, windowedHeight, vidmode.refreshRate());
+					centerWindow();
+					lastX = 0;
+					lastY = 0;
+					glfwSetCursorPos(window, 0, 0);
+				// Set to fullscreen
+				} else {
+					windowedWidth = windowWidth;
+					windowedHeight = windowHeight;
+					glfwSetWindowMonitor(window, glfwGetPrimaryMonitor(), 100, 100, screenWidth, screenHeight, vidmode.refreshRate());
+					lastX = 0;
+					lastY = 0;
+					glfwSetCursorPos(window, 0, 0);
+				}
 			}
-			
-			if (key == GLFW_KEY_DOWN && action == GLFW_RELEASE) {
-				lerp -= 0.1;
-				if (lerp < 0.0)
-					lerp = 0.0f;
-				shader.setFloat("lerp", lerp);
+		});
+		
+		glfwSetMouseButtonCallback(window, (window, button, action, mods) -> {
+			if (button == GLFW_MOUSE_BUTTON_LEFT && glfwGetInputMode(window, GLFW_CURSOR) == GLFW_CURSOR_NORMAL) {
+				// We want to reset the cursor pos and LastX and LastY
+				// This is so that the position doesn't "jump" when reentering the window
+				glfwSetCursorPos(window, screenWidth/2, screenHeight/2);
+				lastX = screenWidth/2;
+				lastY = screenHeight/2;
+				glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 			}
 		});
 		
 		glfwSetCursorPosCallback(window, (window, xpos, ypos) -> {
+			// We don't want to process mouse movement if the window is unfocused
+			if (glfwGetInputMode(window, GLFW_CURSOR) == GLFW_CURSOR_NORMAL) return;
 			if (firstMouse) {
 				lastX = (float) xpos;
 				lastY = (float) ypos;
@@ -168,25 +218,6 @@ public class Window {
 			windowHeight = height;
 			aspectRatio = (float) windowWidth / (float) windowHeight;
 		});
-		
-		// Center the window
-		try ( MemoryStack stack = stackPush() ) {
-			IntBuffer pWidth = stack.mallocInt(1);
-			IntBuffer pHeight = stack.mallocInt(1);
-			
-			// Get the window size
-			glfwGetWindowSize(window, pWidth, pHeight);
-			
-			// Get primary monitor resolution
-			GLFWVidMode vidmode = glfwGetVideoMode(glfwGetPrimaryMonitor());
-			
-			// Center the window
-			glfwSetWindowPos(
-				window,
-				(vidmode.width() - pWidth.get(0)) / 2,
-				(vidmode.height() - pHeight.get(0)) / 2
-			);
-		}
 		
 		// Make OpenGL context current
 		glfwMakeContextCurrent(window);
