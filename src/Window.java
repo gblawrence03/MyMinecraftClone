@@ -39,6 +39,7 @@ public class Window {
 	private WorldGenerator world;
 	
 	private int VAO;
+	private int faceVBO;
 	private int VBO;
 	private int EBO;
 	
@@ -69,7 +70,9 @@ public class Window {
 	};
 	
 	private ArrayList<Float> blockVertices = new ArrayList<Float>();
+	private ArrayList<Integer> blockFaces = new ArrayList<Integer>();
 	private FloatBuffer verticesBuffer;
+	private IntBuffer facesBuffer;
 	private GLFWVidMode vidmode;
 	
 	public static void main(String[] args) {
@@ -235,15 +238,6 @@ public class Window {
 		glViewport(0, 0, windowWidth, windowHeight);
 		
 		glClearColor(0.6f, 0.7f, 0.85f, 0.0f);
-
-		// Create shader, texture, camera objects
-		shader = new Shader("src/blockVertex.glsl", "src/blockFragment.glsl");
-		
-		VAO = glGenVertexArrays();
-		VBO = glGenBuffers();
-		EBO = glGenBuffers();
-		
-		glBindVertexArray(VAO);
 		
 		// World generation
 		
@@ -264,13 +258,19 @@ public class Window {
 		logger.info("Generating vertices took " + (endTime - startTime) / 1000f + " seconds.");
 		
 		startTime = System.currentTimeMillis();
-		FloatBuffer verticesBuffer = MemoryUtil.memAllocFloat(blockVertices.size());
+		verticesBuffer = MemoryUtil.memAllocFloat(blockVertices.size());
+		facesBuffer = MemoryUtil.memAllocInt(blockFaces.size());
 		
 		for (int i = 0; i < blockVertices.size(); i++) {
 			verticesBuffer.put(blockVertices.get(i));
 		}
 		
+		for (int i = 0; i < blockFaces.size(); i++) {
+			facesBuffer.put(blockFaces.get(i));
+		}
+		
 		verticesBuffer.flip();
+		facesBuffer.flip();
 		endTime = System.currentTimeMillis();
 		logger.info("Sending vertices took " + (endTime - startTime) / 1000f + " seconds.");
 		
@@ -282,24 +282,33 @@ public class Window {
 		
 		camera = new Camera(cameraPos, cameraUp, yaw, pitch);
 		
-		// Set up VBO
+		// Create shader, texture, camera objects
+		shader = new Shader("src/blockVertex.glsl", "src/blockFragment.glsl");
+		
+		VAO = glGenVertexArrays();
+		VBO = glGenBuffers();
+		faceVBO = glGenBuffers();
+		EBO = glGenBuffers();
+		
+		glBindVertexArray(VAO);
+		
+		// Set up vertices VBO
 		glBindBuffer(GL_ARRAY_BUFFER, VBO);
 		glBufferData(GL_ARRAY_BUFFER, verticesBuffer, GL_STATIC_DRAW);
-		
-		// Set up EBO
-		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
-		glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices, GL_STATIC_DRAW);
 
 		// Set up VAO
 		// Position
-		glVertexAttribPointer(0, 3, GL_FLOAT, false, 8 * FLOAT_BYTES, 0);
+		glVertexAttribPointer(0, 3, GL_FLOAT, false, 5 * FLOAT_BYTES, 0);
 		glEnableVertexAttribArray(0);
-		// Normal
-		glVertexAttribPointer(1, 3, GL_FLOAT, false, 8 * FLOAT_BYTES, (3 * FLOAT_BYTES));
-		glEnableVertexAttribArray(1);
+
 		// Texture
-		glVertexAttribPointer(2, 2, GL_FLOAT, false, 8 * FLOAT_BYTES, (6 * FLOAT_BYTES));
+		glVertexAttribPointer(2, 2, GL_FLOAT, false, 5 * FLOAT_BYTES, (3 * FLOAT_BYTES));
 		glEnableVertexAttribArray(2);
+		
+		glBindBuffer(GL_ARRAY_BUFFER, faceVBO);
+		glBufferData(GL_ARRAY_BUFFER, facesBuffer, GL_STATIC_DRAW);
+		glVertexAttribIPointer(1, 1, GL_INT, 0, 0);
+		glEnableVertexAttribArray(1);
 		
 		// important!
 		glEnable(GL_DEPTH_TEST);
@@ -347,13 +356,12 @@ public class Window {
 					if (world.positions[x][y][z].type != Block.BlockType.AIR
 						&& world.blockAdjacentToAir(x, y, z)) {
 						
-						ArrayList<Float> vertices = world.positions[x][y][z].getVertexArray(
+						world.positions[x][y][z].getVertexArray(blockVertices,
 									x - (int) world.length / 2, 
 									y - (int) world.height / 2, 
-									z - (int) world.width / 2);
-							
-						blockVertices.addAll(vertices);
-							
+									z - (int) world.width / 2);		
+						
+						world.positions[x][y][z].getFaceArray(blockFaces);
 					}
 				}
 			}
@@ -380,7 +388,7 @@ public class Window {
 		tempBlockTexture.bind();
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-		glDrawArrays(GL_TRIANGLES, 0, blockVertices.size() / 8);
+		glDrawArrays(GL_TRIANGLES, 0, blockVertices.size() / 5);
 	}
 	
 	private void processInput() {

@@ -142,22 +142,24 @@ public class Block {
 		this.type = type;
 	}
 	
-	
-	public ArrayList<Float> getVertexArray(float xOffset, float yOffset, float zOffset) {
-		ArrayList<Float> vertices = new ArrayList<Float>(36 * 8);
-		
+	public void getFaceArray(ArrayList<Integer> faces) {
 		for (int i = 0; i < 36; i++) {
+			faces.add(i / 6);
+		}
+	}
+	
+	public void getVertexArray(ArrayList<Float> vertices, float xOffset, float yOffset, float zOffset) {		
+		for (int i = 0; i < 36; i++) {
+			int vertexOffset = i * 8;
 			// Positions 
-			float xPos = Block.vertices[i * 8 + 0];
-			float yPos = Block.vertices[i * 8 + 1];
-			float zPos = Block.vertices[i * 8 + 2];
+			float xPos = Block.vertices[vertexOffset + 0];
+			float yPos = Block.vertices[vertexOffset + 1];
+			float zPos = Block.vertices[vertexOffset + 2];
 			vertices.add(xOffset + xPos);
 			vertices.add(yOffset + yPos);
 			vertices.add(zOffset + zPos);
-			// Normals 
-			vertices.add(Block.vertices[i * 8 + 3]);
-			vertices.add(Block.vertices[i * 8 + 4]);
-			vertices.add(Block.vertices[i * 8 + 5]);
+			// FaceID 
+			// vertices.add((float) (i / 6));
 			
 			// Get the face and texture based on the index of the vertex (groups of 6 vertices)
 			BlockFace face = BlockFace.values()[i / 6];
@@ -168,10 +170,8 @@ public class Block {
 			int atlasXPos = atlasIndex / atlasHeight;
 			int atlasYPos = atlasIndex % atlasWidth;
 			
-			vertices.add(((float) atlasXPos + Block.vertices[i * 8 + 6]) / (float) atlasWidth);
-			vertices.add(1 - ((float) atlasYPos + Block.vertices[i * 8 + 7]) / (float) atlasHeight);
+			vertices.add(((float) atlasXPos + Block.vertices[vertexOffset + 6]) / (float) atlasWidth);
+			vertices.add(1 - ((float) atlasYPos + Block.vertices[vertexOffset + 7]) / (float) atlasHeight);
 		}
-		
-		return vertices;
 	}
 }
