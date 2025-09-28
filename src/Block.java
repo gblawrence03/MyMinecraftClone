@@ -8,8 +8,9 @@ public class Block {
 		AIR,
 		GRASS,
 		STONE,
-		WATER,
-		DIRT
+		DIRT,
+		SAND,
+		WATER
 	}
 	
 	public enum BlockFace {
@@ -113,11 +114,17 @@ public class Block {
 			new TilePos(2, 0), new TilePos(2, 0),
 			new TilePos(2, 0), new TilePos(2, 0)
 		});
+		
+		atlasMap.put(BlockType.SAND, new TilePos[] {
+				new TilePos(6, 0), new TilePos(6, 0),
+				new TilePos(6, 0), new TilePos(6, 0),
+				new TilePos(6, 0), new TilePos(6, 0)
+		});
 
 		atlasMap.put(BlockType.WATER, new TilePos[] {
-			new TilePos(3, 0), new TilePos(3, 0),
-			new TilePos(3, 0), new TilePos(3, 0),
-			new TilePos(3, 0), new TilePos(3, 0)
+			new TilePos(0, 0), new TilePos(0, 0),
+			new TilePos(0, 0), new TilePos(0, 0),
+			new TilePos(0, 0), new TilePos(3, 0)
 		});
 		
 		int numBlockTypes = BlockType.values().length; 
@@ -154,6 +161,11 @@ public class Block {
 			typeVertices[vertexOffset] = vertices[fetchOffset];
 			typeVertices[vertexOffset + 1] = vertices[fetchOffset + 1];
 			typeVertices[vertexOffset + 2] = vertices[fetchOffset + 2];
+			
+			// Lower top y coordinates by a pixel
+			if (type == Block.BlockType.WATER && vertices[fetchOffset + 1] > 0.0f) {
+				typeVertices[vertexOffset + 1] = vertices[fetchOffset + 1] * 3 / 4;
+			}
 			
 			// Normals
 			typeVertices[vertexOffset + 3] = vertices[fetchOffset + 3];

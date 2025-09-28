@@ -89,8 +89,10 @@ public class WorldGenerator {
 				for (; i < yPos; i++) {
 					positions[x][i][z] = new Block(Block.BlockType.DIRT);
 				}
-				// then grass
-				positions[x][yPos][z] = new Block(Block.BlockType.GRASS);
+				
+				if (yPos >= seaLevel) positions[x][yPos][z] = new Block(Block.BlockType.GRASS);
+				else positions[x][i][z] = new Block(Block.BlockType.SAND);
+				
 				i++;
 				// then water up to sea level
 				for (; i <= seaLevel; i++) {
@@ -105,7 +107,29 @@ public class WorldGenerator {
 	}
 	
 	// Block culling
-	public boolean blockAdjacentToAir(int x, int y, int z) {
+	public boolean blockVisible(int x, int y, int z) {
+		Block.BlockType myType = positions[x][y][z].type;
+		
+		if (myType == Block.BlockType.WATER) {
+			// We only want to render water when it's adjacent to air
+			// If it is at the edge of the world, consider it adjacent to the air 
+			// except when below the world
+			if (x <= 0 || x >= length - 1) return true;
+			if (		  y >= height - 1) return true;
+			if (z <= 0 || z >= width - 1) return true;
+			
+			// Check adjacent blocks
+			if (positions[x - 1][y][z].type == Block.BlockType.AIR) return true;
+			if (positions[x + 1][y][z].type == Block.BlockType.AIR) return true;
+			if (y > 0)
+				if (positions[x][y - 1][z].type == Block.BlockType.AIR) return true;
+			if (positions[x][y + 1][z].type == Block.BlockType.AIR) return true;
+			if (positions[x][y][z - 1].type == Block.BlockType.AIR) return true;
+			if (positions[x][y][z + 1].type == Block.BlockType.AIR) return true;
+			
+			return false;
+		}
+		
 		// If it is at the edge of the world, consider it adjacent to the air 
 		// except when below the world
 		if (x <= 0 || x >= length - 1) return true;
@@ -120,6 +144,15 @@ public class WorldGenerator {
 		if (positions[x][y + 1][z].type == Block.BlockType.AIR) return true;
 		if (positions[x][y][z - 1].type == Block.BlockType.AIR) return true;
 		if (positions[x][y][z + 1].type == Block.BlockType.AIR) return true;
+		
+		// Check adjacent blocks
+		if (positions[x - 1][y][z].type == Block.BlockType.WATER) return true;
+		if (positions[x + 1][y][z].type == Block.BlockType.WATER) return true;
+		if (y > 0)
+			if (positions[x][y - 1][z].type == Block.BlockType.WATER) return true;
+		if (positions[x][y + 1][z].type == Block.BlockType.WATER) return true;
+		if (positions[x][y][z - 1].type == Block.BlockType.WATER) return true;
+		if (positions[x][y][z + 1].type == Block.BlockType.WATER) return true;
 		
 		return false;
 	}

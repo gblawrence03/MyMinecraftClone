@@ -2,6 +2,7 @@ import org.lwjgl.*;
 import org.lwjgl.glfw.*;
 import org.lwjgl.opengl.*;
 import org.lwjgl.system.*;
+
 import org.lwjgl.Version;
 
 import java.io.File;
@@ -315,6 +316,8 @@ public class Window {
 		
 		// important!
 		glEnable(GL_DEPTH_TEST);
+		glEnable(GL_BLEND);
+		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
 		// Activate the atlas texture
 		glActiveTexture(GL_TEXTURE0);
@@ -361,7 +364,7 @@ public class Window {
 				for (int z = 0; z < world.width; z++) {
 					Block block = world.positions[x][y][z];
 					if (block.type != Block.BlockType.AIR
-						&& world.blockAdjacentToAir(x, y, z)) {
+						&& world.blockVisible(x, y, z)) {
 						
 						int offsetX = x - (int) world.length / 2;
 						int offsetY = y - (int) world.height / 2;
@@ -394,7 +397,6 @@ public class Window {
 			int numBlocks = instancePositionsMap.get(type).size() / 3;
 			glDrawArraysInstanced(GL_TRIANGLES, 0, 36, numBlocks);
 		}
-		
 	}
 	
 	private void processInput() {
