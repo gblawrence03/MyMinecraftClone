@@ -34,15 +34,15 @@ public class WorldGenerator {
 		float continentalDampenWavelength = 100f; // Used to dampen the continental factor to prevent long cliffs
 		float variationWavelength = 300f;
 		int layer1Wavelength = 240; // Base height layer 
-		int layer2Wavelength = 80; // Second base height layer
-		int layer3Wavelength = 40; // To add small variations regardless of location
-		int layer4Wavelength = 20; // Small peaks in high volalility areas
+		int layer2Wavelength = 60; // Second base height layer
+		int layer3Wavelength = 30; // To add small variations regardless of location
+		int layer4Wavelength = 10; // Small peaks in high volalility areas
 		
 		float continentalStrength = 6f;
 		float layer1Amplitude = 3f;
 		float layer2Amplitude = 1.5f;
 		float layer3Amplitude = 1f;
-		float layer4Amplitude = 0.2f;
+		float layer4Amplitude = 0.4f;
 		
 		// Should include 0 and 1 and be in order
 		float[] continentalIndexes = {0, 0.2f, 0.4f, 0.41f, 0.6f, 0.8f, 1};
@@ -69,7 +69,7 @@ public class WorldGenerator {
 				double y = layer1Amplitude * layer1 
 						+  layer2Amplitude * layer2 * variation * peaks
 						+  layer3Amplitude * layer3 * variation * peaks
-						+ layer4Amplitude * layer4 * variation
+						+ layer4Amplitude * layer4 * variation * variation
 						+ continental * continentalStrength * continentalDampen * continentalDampen * continentalDampen; 
 				y = y / (layer1Amplitude + layer2Amplitude + layer3Amplitude + layer4Amplitude + continentalStrength); // Scale to between 0 and 1
 				y = Math.pow(y, 1.5f);

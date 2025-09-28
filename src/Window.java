@@ -39,7 +39,7 @@ public class Window {
 	private WorldGenerator world;
 	
 	private int VAO;
-	private int blockFaceVBO;
+	private int blockVBO;
 	private int VBO;
 	private int EBO;
 	
@@ -69,10 +69,8 @@ public class Window {
 			4, 3, 0
 	};
 	
-	private ArrayList<Float> blockVertices = new ArrayList<Float>();
-	private ArrayList<Integer> blockFaces = new ArrayList<Integer>();
-	private FloatBuffer verticesBuffer;
-	private IntBuffer blockFacesBuffer;
+	private ArrayList<Integer> blockData = new ArrayList<Integer>();
+	private IntBuffer blockDataBuffer;
 	private GLFWVidMode vidmode;
 	
 	public static void main(String[] args) {
@@ -246,7 +244,7 @@ public class Window {
 		logger.info("Generating world. Seed for the world generator: \"" + worldSeedString + "\" -> " + worldSeed);
 		
 		long startTime = System.currentTimeMillis();
-		world = new WorldGenerator(worldSeed, 700, 700, 50);
+		world = new WorldGenerator(worldSeed, 600, 600, 50);
 		long endTime = System.currentTimeMillis();
 		
 		logger.info("World generation took " + (endTime - startTime) / 1000f + " seconds.");
@@ -258,19 +256,13 @@ public class Window {
 		logger.info("Generating vertices took " + (endTime - startTime) / 1000f + " seconds.");
 		
 		startTime = System.currentTimeMillis();
-		verticesBuffer = MemoryUtil.memAllocFloat(blockVertices.size());
-		blockFacesBuffer = MemoryUtil.memAllocInt(blockFaces.size());
+		blockDataBuffer = MemoryUtil.memAllocInt(blockData.size());
 		
-		for (int i = 0; i < blockVertices.size(); i++) {
-			verticesBuffer.put(blockVertices.get(i));
+		for (int i = 0; i < blockData.size(); i++) {
+			blockDataBuffer.put(blockData.get(i));
 		}
-		
-		for (int i = 0; i < blockFaces.size(); i++) {
-			blockFacesBuffer.put(blockFaces.get(i));
-		}
-		
-		verticesBuffer.flip();
-		blockFacesBuffer.flip();
+		blockDataBuffer.flip();
+
 		endTime = System.currentTimeMillis();
 		logger.info("Sending vertices took " + (endTime - startTime) / 1000f + " seconds.");
 		
@@ -284,30 +276,52 @@ public class Window {
 		
 		// Create shader, texture, camera objects
 		shader = new Shader("src/blockVertex.glsl", "src/blockFragment.glsl");
+		shader.use();
 		
+		// VAO for cube data - used by each instance
+		// This is aPos in the vertex shader - position of each vertex
 		VAO = glGenVertexArrays();
-		VBO = glGenBuffers();
-		blockFaceVBO = glGenBuffers();
-		EBO = glGenBuffers();
-		
 		glBindVertexArray(VAO);
 		
-		// Set up vertices VBO
+		VBO = glGenBuffers();
 		glBindBuffer(GL_ARRAY_BUFFER, VBO);
-		glBufferData(GL_ARRAY_BUFFER, verticesBuffer, GL_STATIC_DRAW);
-
-		// Set up VAO
-		// Position
-		glVertexAttribPointer(0, 3, GL_FLOAT, false, 3 * FLOAT_BYTES, 0);
+		glBufferData(GL_ARRAY_BUFFER, Block.vertices, GL_STATIC_DRAW);
+		
+		// Positions
+		int stride = 9 * FLOAT_BYTES;
+		glVertexAttribPointer(0, 3, GL_FLOAT, false, stride, 0);
 		glEnableVertexAttribArray(0);
-		
-		glBindBuffer(GL_ARRAY_BUFFER, blockFaceVBO);
-		glBufferData(GL_ARRAY_BUFFER, blockFacesBuffer, GL_STATIC_DRAW);
-		glVertexAttribIPointer(1, 1, GL_INT, 2 * Integer.BYTES, 0);
+		// Normals
+		glVertexAttribPointer(1, 3, GL_FLOAT, false, stride, 3 * FLOAT_BYTES);
 		glEnableVertexAttribArray(1);
-		glVertexAttribIPointer(2, 1, GL_INT, 2 * Integer.BYTES, Integer.BYTES);
+		// TexCoords
+		glVertexAttribPointer(2, 2, GL_FLOAT, false, stride, 6 * FLOAT_BYTES);
 		glEnableVertexAttribArray(2);
+		// FaceID
+		glVertexAttribPointer(3, 1, GL_FLOAT, false, stride, 8 * FLOAT_BYTES);
+		glEnableVertexAttribArray(3);
 		
+		// Instance data		
+		blockVBO = glGenBuffers();
+		glBindBuffer(GL_ARRAY_BUFFER, blockVBO);
+		glBufferData(GL_ARRAY_BUFFER, blockDataBuffer, GL_STATIC_DRAW);
+		
+		stride = 4 * Integer.BYTES;
+		
+		// Block positions
+		glVertexAttribIPointer(4, 3, GL_INT, stride, 0);
+		glEnableVertexAttribArray(4);
+		glVertexAttribDivisor(4, 1);
+		
+		// Block types
+		glVertexAttribIPointer(5, 1, GL_INT, stride, 3 * Integer.BYTES);
+		glEnableVertexAttribArray(5);
+		glVertexAttribDivisor(5, 1);
+		
+		glBindBuffer(GL_ARRAY_BUFFER, 0);
+		glBindVertexArray(0);
+		
+		// Block/face indices for texture atlas
 		IntBuffer atlasIndicesBuffer = BufferUtils.createIntBuffer(Block.atlasIndices.length);
 		atlasIndicesBuffer.put(Block.atlasIndices).flip();
 		
@@ -316,20 +330,16 @@ public class Window {
 		glBufferData(GL_TEXTURE_BUFFER, atlasIndicesBuffer, GL_STATIC_DRAW);
 		
 		int tex = glGenTextures();
-		glBindTexture(GL_TEXTURE_BUFFER, tex);
-		glTexBuffer(GL_TEXTURE_BUFFER, GL_R32I, atlasIndicesVBO);
 		glActiveTexture(GL_TEXTURE1);
 		glBindTexture(GL_TEXTURE_BUFFER, tex);
+		glTexBuffer(GL_TEXTURE_BUFFER, GL_R32I, atlasIndicesVBO);
 		int loc = glGetUniformLocation(shader.ID, "atlasIndices");
 		glUniform1i(loc, 1);
-		
-		
+
 		
 		// important!
 		glEnable(GL_DEPTH_TEST);
-		
-		shader.use();
-		
+
 		// Set to wireframe
 		// glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 		
@@ -369,12 +379,11 @@ public class Window {
 					if (world.positions[x][y][z].type != Block.BlockType.AIR
 						&& world.blockAdjacentToAir(x, y, z)) {
 						
-						world.positions[x][y][z].getVertexArray(blockVertices,
-									x - (int) world.length / 2, 
-									y - (int) world.height / 2, 
-									z - (int) world.width / 2);		
+						blockData.add(x - (int) world.length / 2);
+						blockData.add(y - (int) world.height / 2);
+						blockData.add(z - (int) world.width / 2);	
 						
-						world.positions[x][y][z].getFaceArray(blockFaces);
+						blockData.add(world.positions[x][y][z].type.ordinal());
 					}
 				}
 			}
@@ -397,13 +406,10 @@ public class Window {
 		shader.setInt("atlasWidth", Block.atlasWidth);
 		shader.setInt("atlasHeight", Block.atlasHeight);
 		
-		// Create a bunch of cubes
 		glActiveTexture(GL_TEXTURE0);
-		Texture tempBlockTexture = Block.blockAtlas;
-		tempBlockTexture.bind();
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-		glDrawArrays(GL_TRIANGLES, 0, blockVertices.size() / 5);
+		Block.blockAtlas.bind();
+
+		glDrawArraysInstanced(GL_TRIANGLES, 0, Block.vertices.length / 9, blockData.size() / 4);
 	}
 	
 	private void processInput() {
