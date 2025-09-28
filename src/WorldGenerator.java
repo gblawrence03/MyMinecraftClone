@@ -39,8 +39,8 @@ public class WorldGenerator {
 		int layer4Wavelength = 10; // Small peaks in high volalility areas
 		
 		float continentalStrength = 6f;
-		float layer1Amplitude = 3f;
-		float layer2Amplitude = 1.5f;
+		float layer1Amplitude = 4f;
+		float layer2Amplitude = 2f;
 		float layer3Amplitude = 1f;
 		float layer4Amplitude = 0.4f;
 		
