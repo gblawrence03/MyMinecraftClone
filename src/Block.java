@@ -140,23 +140,38 @@ public class Block {
 		this.type = type;
 	}
 	
-	public void getFaceArray(ArrayList<Integer> blockFaces) {
+	/*
+	 * Precomputes positions, normals, texcoords for a given block type
+	 */
+	public static float[] precomputeVertexesForType(BlockType type) {
+		float[] typeVertices = new float[36 * 8];
+		
 		for (int i = 0; i < 36; i++) {
-			blockFaces.add(type.ordinal());
-			blockFaces.add(i);
+			int fetchOffset = i*9;
+			int vertexOffset = i*8;
+			
+			// Positions
+			typeVertices[vertexOffset] = vertices[fetchOffset];
+			typeVertices[vertexOffset + 1] = vertices[fetchOffset + 1];
+			typeVertices[vertexOffset + 2] = vertices[fetchOffset + 2];
+			
+			// Normals
+			typeVertices[vertexOffset + 3] = vertices[fetchOffset + 3];
+			typeVertices[vertexOffset + 4] = vertices[fetchOffset + 4];
+			typeVertices[vertexOffset + 5] = vertices[fetchOffset + 5];
+			
+			// UVs
+			int faceID = i / 6;
+			int baseIndex = type.ordinal() * 12 + faceID * 2;
+			int atlasX = atlasIndices[baseIndex];
+			int atlasY = atlasIndices[baseIndex + 1];
+			
+			float vertexU = vertices[fetchOffset + 6];
+			float vertexV = vertices[fetchOffset + 7];
+			
+			typeVertices[vertexOffset + 6] = (atlasX + vertexU) / atlasWidth;
+			typeVertices[vertexOffset + 7] = 1 - (atlasY + vertexV) / atlasHeight;
 		}
-	}
-	
-	public void getVertexArray(ArrayList<Float> vertices, float xOffset, float yOffset, float zOffset) {		
-		for (int i = 0; i < 36; i++) {
-			int vertexOffset = i * 3;
-			// Positions 
-			float xPos = Block.vertices[vertexOffset + 0];
-			float yPos = Block.vertices[vertexOffset + 1];
-			float zPos = Block.vertices[vertexOffset + 2];
-			vertices.add(xOffset + xPos);
-			vertices.add(yOffset + yPos);
-			vertices.add(zOffset + zPos);
-		}
+		return typeVertices;
 	}
 }

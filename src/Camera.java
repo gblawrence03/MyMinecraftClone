@@ -18,7 +18,7 @@ public class Camera {
 	
 	final float YAW = -90.0f;
 	final float PITCH = 0.0f;
-	final float SPEED = 10.0f;
+	final float SPEED = 15.0f;
 	final float SENSITIVITY = 0.1f;
 	final float ZOOM = 45.0f;
 	

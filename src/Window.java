@@ -10,6 +10,9 @@ import java.nio.*;
 import java.util.Scanner;
 import java.util.logging.*;
 import java.util.ArrayList;
+import java.util.EnumMap;
+import java.util.List;
+import java.util.Map;
 import java.lang.Math;
 
 import org.joml.*;
@@ -36,12 +39,14 @@ public class Window {
 	private long window;
 	private Shader shader;
 	private Camera camera;
-	private WorldGenerator world;
+	private Matrix4f perspective;
 	
-	private int VAO;
-	private int blockVBO;
-	private int VBO;
-	private int EBO;
+	private WorldGenerator world;
+
+	private Map<Block.BlockType, Integer> blockVBOs = new EnumMap<>(Block.BlockType.class);
+	private Map<Block.BlockType, Integer> blockVAOs = new EnumMap<>(Block.BlockType.class);
+	private Map<Block.BlockType, Integer> instanceVBOs = new EnumMap<>(Block.BlockType.class);
+	private Map<Block.BlockType, List<Integer>> instancePositionsMap;
 	
 	private Logger logger;
 	
@@ -60,17 +65,7 @@ public class Window {
 	private float deltaTime;
 	
 	private final int FLOAT_BYTES = Float.SIZE / 8;
-	
-	private int[] indices = {
-			0, 1, 3,
-			1, 2, 3,
-			0, 1, 4,
-			1, 4, 5,
-			4, 3, 0
-	};
-	
-	private ArrayList<Integer> blockData = new ArrayList<Integer>();
-	private IntBuffer blockDataBuffer;
+
 	private GLFWVidMode vidmode;
 	
 	public static void main(String[] args) {
@@ -209,6 +204,7 @@ public class Window {
 		
 		glfwSetScrollCallback(window, (window, xoffset, yoffset) -> {
 			camera.processMouseScroll((float) yoffset);
+			perspective = (new Matrix4f()).perspective((float) Math.toRadians(camera.Zoom), aspectRatio, 0.1f, 1000.0f);
 		});
 		
 		// Set up window resize callback
@@ -237,6 +233,18 @@ public class Window {
 		
 		glClearColor(0.6f, 0.7f, 0.85f, 0.0f);
 		
+		// Create shader, texture, camera objects
+		Vector3f cameraPos = new Vector3f(0.0f, 5.0f, 0.0f);
+		Vector3f cameraUp = new Vector3f(0.0f, 1.0f, 0.0f);
+		float yaw = 90;
+		float pitch = 0;
+		
+		camera = new Camera(cameraPos, cameraUp, yaw, pitch);
+		perspective = (new Matrix4f()).perspective((float) Math.toRadians(camera.Zoom), aspectRatio, 0.1f, 1000.0f);
+
+		shader = new Shader("src/blockVertex.glsl", "src/blockFragment.glsl");
+		shader.use();
+		
 		// World generation
 		
 		String worldSeedString = "fsdfsdf";
@@ -244,102 +252,74 @@ public class Window {
 		logger.info("Generating world. Seed for the world generator: \"" + worldSeedString + "\" -> " + worldSeed);
 		
 		long startTime = System.currentTimeMillis();
-		world = new WorldGenerator(worldSeed, 600, 600, 50);
+		world = new WorldGenerator(worldSeed, 1000, 1000, 50);
 		long endTime = System.currentTimeMillis();
 		
 		logger.info("World generation took " + (endTime - startTime) / 1000f + " seconds.");
 		
-		startTime = System.currentTimeMillis();
-		generateBlockVertices();
-		endTime = System.currentTimeMillis();
-		
-		logger.info("Generating vertices took " + (endTime - startTime) / 1000f + " seconds.");
-		
-		startTime = System.currentTimeMillis();
-		blockDataBuffer = MemoryUtil.memAllocInt(blockData.size());
-		
-		for (int i = 0; i < blockData.size(); i++) {
-			blockDataBuffer.put(blockData.get(i));
+		// Map each block type to a list of block positions
+		instancePositionsMap = new EnumMap<>(Block.BlockType.class);
+		for (Block.BlockType type : Block.BlockType.values()) {
+			instancePositionsMap.put(type, new ArrayList<Integer>());
 		}
-		blockDataBuffer.flip();
-
+		
+		startTime = System.currentTimeMillis();
+		generateInstanceVertices();
 		endTime = System.currentTimeMillis();
-		logger.info("Sending vertices took " + (endTime - startTime) / 1000f + " seconds.");
+		logger.info("Generating instance position maps took " + (endTime - startTime) / 1000f + " seconds.");
 		
-	
-		Vector3f cameraPos = new Vector3f(0.0f, 5.0f, 0.0f);
-		Vector3f cameraUp = new Vector3f(0.0f, 1.0f, 0.0f);
-		float yaw = 90;
-		float pitch = 0;
-		
-		camera = new Camera(cameraPos, cameraUp, yaw, pitch);
-		
-		// Create shader, texture, camera objects
-		shader = new Shader("src/blockVertex.glsl", "src/blockFragment.glsl");
-		shader.use();
-		
-		// VAO for cube data - used by each instance
-		// This is aPos in the vertex shader - position of each vertex
-		VAO = glGenVertexArrays();
-		glBindVertexArray(VAO);
-		
-		VBO = glGenBuffers();
-		glBindBuffer(GL_ARRAY_BUFFER, VBO);
-		glBufferData(GL_ARRAY_BUFFER, Block.vertices, GL_STATIC_DRAW);
-		
-		// Positions
-		int stride = 9 * FLOAT_BYTES;
-		glVertexAttribPointer(0, 3, GL_FLOAT, false, stride, 0);
-		glEnableVertexAttribArray(0);
-		// Normals
-		glVertexAttribPointer(1, 3, GL_FLOAT, false, stride, 3 * FLOAT_BYTES);
-		glEnableVertexAttribArray(1);
-		// TexCoords
-		glVertexAttribPointer(2, 2, GL_FLOAT, false, stride, 6 * FLOAT_BYTES);
-		glEnableVertexAttribArray(2);
-		// FaceID
-		glVertexAttribPointer(3, 1, GL_FLOAT, false, stride, 8 * FLOAT_BYTES);
-		glEnableVertexAttribArray(3);
-		
-		// Instance data		
-		blockVBO = glGenBuffers();
-		glBindBuffer(GL_ARRAY_BUFFER, blockVBO);
-		glBufferData(GL_ARRAY_BUFFER, blockDataBuffer, GL_STATIC_DRAW);
-		
-		stride = 4 * Integer.BYTES;
-		
-		// Block positions
-		glVertexAttribIPointer(4, 3, GL_INT, stride, 0);
-		glEnableVertexAttribArray(4);
-		glVertexAttribDivisor(4, 1);
-		
-		// Block types
-		glVertexAttribIPointer(5, 1, GL_INT, stride, 3 * Integer.BYTES);
-		glEnableVertexAttribArray(5);
-		glVertexAttribDivisor(5, 1);
-		
-		glBindBuffer(GL_ARRAY_BUFFER, 0);
-		glBindVertexArray(0);
-		
-		// Block/face indices for texture atlas
-		IntBuffer atlasIndicesBuffer = BufferUtils.createIntBuffer(Block.atlasIndices.length);
-		atlasIndicesBuffer.put(Block.atlasIndices).flip();
-		
-		int atlasIndicesVBO = glGenBuffers();
-		glBindBuffer(GL_TEXTURE_BUFFER, atlasIndicesVBO);
-		glBufferData(GL_TEXTURE_BUFFER, atlasIndicesBuffer, GL_STATIC_DRAW);
-		
-		int tex = glGenTextures();
-		glActiveTexture(GL_TEXTURE1);
-		glBindTexture(GL_TEXTURE_BUFFER, tex);
-		glTexBuffer(GL_TEXTURE_BUFFER, GL_R32I, atlasIndicesVBO);
-		int loc = glGetUniformLocation(shader.ID, "atlasIndices");
-		glUniform1i(loc, 1);
-
+		// VAOs and VBOs for each block type
+		startTime = System.currentTimeMillis();
+		for (Block.BlockType type : Block.BlockType.values()) {
+			int vao = glGenVertexArrays();
+			glBindVertexArray(vao);
+			
+			float[] typeVertices = Block.precomputeVertexesForType(type);
+			
+			int vbo = glGenBuffers();
+			glBindBuffer(GL_ARRAY_BUFFER, vbo);
+			glBufferData(GL_ARRAY_BUFFER, typeVertices, GL_STATIC_DRAW);
+			
+			// Positions
+			int stride = 8 * FLOAT_BYTES;
+			glVertexAttribPointer(0, 3, GL_FLOAT, false, stride, 0);
+			glEnableVertexAttribArray(0);
+			// Normals
+			glVertexAttribPointer(1, 3, GL_FLOAT, false, stride, 3 * FLOAT_BYTES);
+			glEnableVertexAttribArray(1);
+			// TexCoords
+			glVertexAttribPointer(2, 2, GL_FLOAT, false, stride, 6 * FLOAT_BYTES);
+			glEnableVertexAttribArray(2);
+			
+			// Instance Buffer
+			List<Integer> instancePositions = instancePositionsMap.get(type);
+			IntBuffer instanceBuffer = BufferUtils.createIntBuffer(instancePositions.size());
+			for (int val: instancePositions) instanceBuffer.put(val);
+			instanceBuffer.flip();
+			
+			int instanceVBO = glGenBuffers();
+			glBindBuffer(GL_ARRAY_BUFFER, instanceVBO);
+			glBufferData(GL_ARRAY_BUFFER, instanceBuffer, GL_STATIC_DRAW);
+			glVertexAttribIPointer(3, 3, GL_INT, 3 * Integer.BYTES, 0);
+			glEnableVertexAttribArray(3);
+			glVertexAttribDivisor(3, 1);
+			
+			glBindVertexArray(0);
+			
+			blockVBOs.put(type, vbo);
+			blockVAOs.put(type, vao);
+			instanceVBOs.put(type, instanceVBO);
+		}
+		endTime = System.currentTimeMillis();
+		logger.info("Setting up VBOs and VAOs took " + (endTime - startTime) / 1000f + " seconds.");
 		
 		// important!
 		glEnable(GL_DEPTH_TEST);
 
+		// Activate the atlas texture
+		glActiveTexture(GL_TEXTURE0);
+		Block.blockAtlas.bind();
+		
 		// Set to wireframe
 		// glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 		
@@ -372,18 +352,24 @@ public class Window {
 		logger.info("Window closed");
 	}
 	
-	private void generateBlockVertices() {
+	/*
+	 * Fills the instance maps with the positions of each block of the same type
+	 */
+	private void generateInstanceVertices() {
 		for (int x = 0; x < world.length; x++) {
 			for (int y = 0; y < world.height; y++) {
 				for (int z = 0; z < world.width; z++) {
-					if (world.positions[x][y][z].type != Block.BlockType.AIR
+					Block block = world.positions[x][y][z];
+					if (block.type != Block.BlockType.AIR
 						&& world.blockAdjacentToAir(x, y, z)) {
 						
-						blockData.add(x - (int) world.length / 2);
-						blockData.add(y - (int) world.height / 2);
-						blockData.add(z - (int) world.width / 2);	
+						int offsetX = x - (int) world.length / 2;
+						int offsetY = y - (int) world.height / 2;
+						int offsetZ = z - (int) world.width / 2;
 						
-						blockData.add(world.positions[x][y][z].type.ordinal());
+						instancePositionsMap.get(block.type).add(offsetX);
+						instancePositionsMap.get(block.type).add(offsetY);
+						instancePositionsMap.get(block.type).add(offsetZ);
 					}
 				}
 			}
@@ -393,23 +379,22 @@ public class Window {
 	private void render() {
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT ); // clear frame buffer
 		
-		glBindVertexArray(VAO);
-		
 		Matrix4f view = camera.getViewMatrix();
-		Matrix4f perspective = (new Matrix4f()).perspective((float) Math.toRadians(camera.Zoom), aspectRatio, 0.1f, 1000.0f);
 
 		shader.setMat4("view", view);
 		shader.setMat4("perspective", perspective);
 		shader.setVec3("globalLightDir", new Vector3f(0.7f, -1.0f, 0.5f));
-		shader.setVec3("cameraDir", camera.Front);
-		shader.setVec3("cameraPos", camera.Position);
-		shader.setInt("atlasWidth", Block.atlasWidth);
-		shader.setInt("atlasHeight", Block.atlasHeight);
-		
-		glActiveTexture(GL_TEXTURE0);
-		Block.blockAtlas.bind();
 
-		glDrawArraysInstanced(GL_TRIANGLES, 0, Block.vertices.length / 9, blockData.size() / 4);
+		/*
+		 * Instanced rendering, with one draw call per block type
+		 */
+		for (Block.BlockType type : Block.BlockType.values()) {
+			int vao = blockVAOs.get(type);
+			glBindVertexArray(vao);
+			int numBlocks = instancePositionsMap.get(type).size() / 3;
+			glDrawArraysInstanced(GL_TRIANGLES, 0, 36, numBlocks);
+		}
+		
 	}
 	
 	private void processInput() {
