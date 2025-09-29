@@ -170,6 +170,27 @@ public class WorldGenerator {
 		float distBetween = indexes[i] - indexes[i - 1];
 		return values[i - 1] + (values[i] - values[i - 1])/distBetween * distToIndex1;
 	}
+	
+	public int getLightLevelAt(int x, int y, int z) {
+		Boolean blocksAbove = false;
+		Block thisBlock = positions[x][y][z];
+		
+		if (y == height - 1) return 15;
+		
+		for (int yPos = y + 1; yPos < height; yPos++) {
+			if (positions[x][yPos][z].type == Block.BlockType.WATER) {
+				blocksAbove = true;
+			}
+		}
+		if (!blocksAbove) {
+			if (thisBlock.type == Block.BlockType.WATER) {
+				return 12;
+			}
+			else {
+				return 15;
+			}
+		} else return 12;
+	}
 }
 
 

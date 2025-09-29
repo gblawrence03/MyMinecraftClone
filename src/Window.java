@@ -301,9 +301,13 @@ public class Window {
 			int instanceVBO = glGenBuffers();
 			glBindBuffer(GL_ARRAY_BUFFER, instanceVBO);
 			glBufferData(GL_ARRAY_BUFFER, instanceBuffer, GL_STATIC_DRAW);
-			glVertexAttribIPointer(3, 3, GL_INT, 3 * Integer.BYTES, 0);
+			glVertexAttribIPointer(3, 3, GL_INT, 4 * Integer.BYTES, 0);
 			glEnableVertexAttribArray(3);
 			glVertexAttribDivisor(3, 1);
+			
+			glVertexAttribIPointer(4, 1, GL_INT, 4 * Integer.BYTES, 3 * Integer.BYTES);
+			glEnableVertexAttribArray(4);
+			glVertexAttribDivisor(4, 1);
 			
 			glBindVertexArray(0);
 			
@@ -373,6 +377,9 @@ public class Window {
 						instancePositionsMap.get(block.type).add(offsetX);
 						instancePositionsMap.get(block.type).add(offsetY);
 						instancePositionsMap.get(block.type).add(offsetZ);
+						
+						int lightLevel = world.getLightLevelAt(x, y, z);
+						instancePositionsMap.get(block.type).add(lightLevel);
 					}
 				}
 			}

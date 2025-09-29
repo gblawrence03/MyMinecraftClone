@@ -1,6 +1,7 @@
 #version 330 core
 out vec4 FragColor;
 in vec2 texCoord;
+flat in int lightLevel;
 flat in vec3 normal;
 
 uniform sampler2D texture1;
@@ -21,5 +22,5 @@ void main()
 	vec3 color = max(minimumStrength, ambientStrength + diff) *
 	 				texColor.rgb;
 
-	FragColor = vec4(color, alpha);
+	FragColor = vec4(color * max(0, float(lightLevel) / 15.0), alpha);
 }
