@@ -5,10 +5,7 @@ import org.lwjgl.system.*;
 
 import org.lwjgl.Version;
 
-import java.io.File;
-import java.io.FileNotFoundException;
 import java.nio.*;
-import java.util.Scanner;
 import java.util.logging.*;
 import java.util.ArrayList;
 import java.util.EnumMap;
@@ -64,6 +61,9 @@ public class Window {
 	private boolean firstMouse = true;
 	
 	private float deltaTime;
+	
+	// Change when new attributes added! 
+	private final int ATTRIBUTES_PER_INSTANCE = 4;
 	
 	private final int FLOAT_BYTES = Float.SIZE / 8;
 
@@ -258,6 +258,11 @@ public class Window {
 		
 		logger.info("World generation took " + (endTime - startTime) / 1000f + " seconds.");
 		
+		startTime = System.currentTimeMillis();
+		world.calculateLightLevels();
+		endTime = System.currentTimeMillis();
+		logger.info("Light level calculation took " + (endTime - startTime) / 1000f + " seconds.");
+		
 		// Map each block type to a list of block positions
 		instancePositionsMap = new EnumMap<>(Block.BlockType.class);
 		for (Block.BlockType type : Block.BlockType.values()) {
@@ -377,9 +382,7 @@ public class Window {
 						instancePositionsMap.get(block.type).add(offsetX);
 						instancePositionsMap.get(block.type).add(offsetY);
 						instancePositionsMap.get(block.type).add(offsetZ);
-						
-						int lightLevel = world.getLightLevelAt(x, y, z);
-						instancePositionsMap.get(block.type).add(lightLevel);
+						instancePositionsMap.get(block.type).add(block.lightLevel);
 					}
 				}
 			}
@@ -401,7 +404,7 @@ public class Window {
 		for (Block.BlockType type : Block.BlockType.values()) {
 			int vao = blockVAOs.get(type);
 			glBindVertexArray(vao);
-			int numBlocks = instancePositionsMap.get(type).size() / 3;
+			int numBlocks = instancePositionsMap.get(type).size() / ATTRIBUTES_PER_INSTANCE;
 			glDrawArraysInstanced(GL_TRIANGLES, 0, 36, numBlocks);
 		}
 	}

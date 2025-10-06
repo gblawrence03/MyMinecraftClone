@@ -10,12 +10,18 @@ uniform mat4 perspective;
 
 out vec2 texCoord;
 flat out vec3 normal;
-flat out int lightLevel;
+flat out float lightLevel;
 
 void main()
 {
 	gl_Position = perspective * view * vec4(aPos + aOffset, 1.0);
 	texCoord = aTexCoord;
 	normal = aNormal;
-	lightLevel = aLightLevel;
+	if (aLightLevel == 15) {
+		lightLevel = 1;
+	}
+	else {
+		lightLevel = pow(float(aLightLevel + 3) / 18.0, 1.5);
+	}
+
 }

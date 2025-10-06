@@ -1,4 +1,5 @@
 import org.joml.*;
+
 import java.lang.Math;
 import java.util.ArrayList;
 
@@ -8,7 +9,7 @@ public class WorldGenerator {
 	int length, width, height, seaLevel;
 	
 	int yScale = 80;
-	int baseHeight = 15;
+	int baseHeight = 13;
 	
 	public WorldGenerator(int seed, int length, int width, int height) {
 		this.length = length;
@@ -104,6 +105,37 @@ public class WorldGenerator {
 				}
 			}
 		}
+		
+		// TEMPORARY, for debugging light levels: 
+		int cx = length/2;
+		int cz = width/2; 
+		int cy = 15; 
+		int r = 12;
+		
+		for (int x = 0; x < length; x++) {
+			for (int z = 0; z < width; z++) {
+				for (int i = 0; i < height; i++) {
+					if ((x - cx)*(x - cx) + (i - cy)*(i - cy) + (z - cz)*(z - cz) < r*r) {
+						positions[x][i][z] = new Block(Block.BlockType.AIR);
+					}
+				}
+			}
+		}
+		
+		cx = length/2 + 13;
+		cz = width/2 + 7; 
+		cy = 10; 
+		r = 9;
+		
+		for (int x = 0; x < length; x++) {
+			for (int z = 0; z < width; z++) {
+				for (int i = 0; i < height; i++) {
+					if ((x - cx)*(x - cx) + (i - cy)*(i - cy) + (z - cz)*(z - cz) < r*r) {
+						positions[x][i][z] = new Block(Block.BlockType.AIR);
+					}
+				}
+			}
+		}
 	}
 	
 	// Block culling
@@ -171,25 +203,79 @@ public class WorldGenerator {
 		return values[i - 1] + (values[i] - values[i - 1])/distBetween * distToIndex1;
 	}
 	
-	public int getLightLevelAt(int x, int y, int z) {
-		Boolean blocksAbove = false;
-		Block thisBlock = positions[x][y][z];
+	private int lightLevelFrom(int x, int y, int z) {
+		if (x < 0 || x >= length || z < 0 || z >= width || y >= height) return 15;
+		if (y < 0) return 1;
 		
-		if (y == height - 1) return 15;
+		Block block = positions[x][y][z];
 		
-		for (int yPos = y + 1; yPos < height; yPos++) {
-			if (positions[x][yPos][z].type == Block.BlockType.WATER) {
-				blocksAbove = true;
+		if (block.type == Block.BlockType.WATER) {
+			return Math.max(1, block.lightLevel - 3);
+		} else if (block.type == Block.BlockType.AIR) {
+			return Math.max(1, block.lightLevel);
+		} else {
+			return 1;
+		}
+	}
+	
+	public void calculateLightLevels() {
+		// All blocks at the top of the world have a light level of 15
+		for (int x = 0; x < length; x++) {
+			for (int z = 0; z < width; z++) {
+				Block block = positions[x][height - 1][z];
+				block.lightLevel = 15;
+				block.isExposedToSunlight = true;
 			}
 		}
-		if (!blocksAbove) {
-			if (thisBlock.type == Block.BlockType.WATER) {
-				return 12;
+		
+		// First pass: Trivial cases where light level must equal 15
+		for (int x = 0; x < length; x++) {
+			for (int y = height - 2; y >= 0; y--) {
+				for (int z = 0; z < width; z++) {
+					Block block = positions[x][y][z];
+					
+					if (positions[x][y + 1][z].type == Block.BlockType.AIR && positions[x][y + 1][z].lightLevel == 15) {
+						block.lightLevel = 15;
+						block.isExposedToSunlight = true;
+					}
+				}
 			}
-			else {
-				return 15;
+		}
+		
+		
+		// Continue making passes, calculating the new light levels, until no changes are made
+		boolean changeMade = true;
+		
+		while (changeMade == true) {
+			changeMade = false;
+			for (int x = 0; x < length; x++) {
+				for (int y = height - 2; y >= 0; y--) {
+					for (int z = 0; z < width; z++) {
+						Block block = positions[x][y][z];
+						
+						if (block.isExposedToSunlight) {
+							block.lightLevel = 15;
+							continue;
+						}
+						
+						int newLightLevel;
+						newLightLevel = Math.max(
+							lightLevelFrom(x - 1, y, z), Math.max(lightLevelFrom(x + 1, y, z),
+							Math.max(lightLevelFrom(x, y - 1, z), Math.max(lightLevelFrom(x, y + 1, z),
+							Math.max(lightLevelFrom(x, y, z - 1), lightLevelFrom(x, y, z + 1))))));
+						
+						if (block.type == Block.BlockType.AIR) {
+							newLightLevel = Math.max(newLightLevel - 1, 1);
+						}
+						
+						if (newLightLevel != block.lightLevel) {
+							block.lightLevel = newLightLevel;
+							changeMade = true;
+						}
+					}
+				}
 			}
-		} else return 12;
+		}	
 	}
 }
 

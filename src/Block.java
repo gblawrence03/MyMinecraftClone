@@ -1,6 +1,4 @@
-import java.util.ArrayList;
 import java.util.EnumMap;
-import java.util.HashMap;
 import java.util.Map;
 
 public class Block {
@@ -143,8 +141,13 @@ public class Block {
 	
 	public BlockType type;
 	
+	// Maximum: 15, minimum: 1
+	public int lightLevel;
+	public boolean isExposedToSunlight;
+	
 	public Block(BlockType type) {
 		this.type = type;
+		lightLevel = 1;
 	}
 	
 	/*
