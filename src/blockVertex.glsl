@@ -2,8 +2,7 @@
 layout (location = 0) in vec3 aPos;
 layout (location = 1) in vec3 aNormal;
 layout (location = 2) in vec2 aTexCoord;
-layout (location = 3) in ivec3 aOffset; // World translation
-layout (location = 4) in int aLightLevel;
+layout (location = 3) in int aLightLevel;
 
 uniform mat4 view;
 uniform mat4 perspective;
@@ -14,14 +13,14 @@ flat out float lightLevel;
 
 void main()
 {
-	gl_Position = perspective * view * vec4(aPos + aOffset, 1.0);
+	gl_Position = perspective * view * vec4(aPos, 1.0);
 	texCoord = aTexCoord;
 	normal = aNormal;
 	if (aLightLevel == 15) {
 		lightLevel = 1;
 	}
 	else {
-		lightLevel = pow(float(aLightLevel + 3) / 18.0, 1.5);
+		lightLevel = 0.09f + 0.91f * float(pow(aLightLevel / 15.0f, 2.5f));
 	}
 
 }
