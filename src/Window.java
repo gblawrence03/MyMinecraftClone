@@ -1,4 +1,3 @@
-import org.lwjgl.*;
 import org.lwjgl.glfw.*;
 import org.lwjgl.opengl.*;
 import org.lwjgl.system.*;
@@ -7,10 +6,6 @@ import org.lwjgl.Version;
 
 import java.nio.*;
 import java.util.logging.*;
-import java.util.ArrayList;
-import java.util.EnumMap;
-import java.util.List;
-import java.util.Map;
 import java.lang.Math;
 
 import org.joml.*;
@@ -19,10 +14,7 @@ import static org.lwjgl.glfw.Callbacks.*;
 import static org.lwjgl.glfw.GLFW.*;
 import static org.lwjgl.opengl.GL11.*;
 import static org.lwjgl.opengl.GL15.*;
-import static org.lwjgl.opengl.GL20.*;
 import static org.lwjgl.opengl.GL30.*;
-import static org.lwjgl.opengl.GL45.*;
-
 import static org.lwjgl.system.MemoryStack.*;
 import static org.lwjgl.system.MemoryUtil.*;
 
@@ -40,11 +32,7 @@ public class Window {
 	private Matrix4f perspective;
 	
 	private WorldGenerator world;
-
-	private Map<Block.BlockType, Integer> blockVBOs = new EnumMap<>(Block.BlockType.class);
-	private Map<Block.BlockType, Integer> blockVAOs = new EnumMap<>(Block.BlockType.class);
-	private Map<Block.BlockType, Integer> instanceVBOs = new EnumMap<>(Block.BlockType.class);
-	private Map<Block.BlockType, List<Integer>> instancePositionsMap;
+	private Chunk chunk;
 	
 	private Logger logger;
 	
@@ -61,11 +49,6 @@ public class Window {
 	private boolean firstMouse = true;
 	
 	private float deltaTime;
-	
-	// Change when new attributes added! 
-	private final int ATTRIBUTES_PER_INSTANCE = 4;
-	
-	private final int FLOAT_BYTES = Float.SIZE / 8;
 
 	private GLFWVidMode vidmode;
 	
@@ -253,75 +236,19 @@ public class Window {
 		logger.info("Generating world. Seed for the world generator: \"" + worldSeedString + "\" -> " + worldSeed);
 		
 		long startTime = System.currentTimeMillis();
-		world = new WorldGenerator(worldSeed, 1000, 1000, 50);
+		world = new WorldGenerator(worldSeed, 100, 100);
+		// For now, the world is just one big chunk
+		//TODO: Multiple chunks!
+		chunk = world.GenerateChunk(0, 0);
 		long endTime = System.currentTimeMillis();
 		
 		logger.info("World generation took " + (endTime - startTime) / 1000f + " seconds.");
 		
 		startTime = System.currentTimeMillis();
-		world.calculateLightLevels();
+		// Build mesh and calculate light levels
+	    chunk.Update();
 		endTime = System.currentTimeMillis();
-		logger.info("Light level calculation took " + (endTime - startTime) / 1000f + " seconds.");
-		
-		// Map each block type to a list of block positions
-		instancePositionsMap = new EnumMap<>(Block.BlockType.class);
-		for (Block.BlockType type : Block.BlockType.values()) {
-			instancePositionsMap.put(type, new ArrayList<Integer>());
-		}
-		
-		startTime = System.currentTimeMillis();
-		generateInstanceVertices();
-		endTime = System.currentTimeMillis();
-		logger.info("Generating instance position maps took " + (endTime - startTime) / 1000f + " seconds.");
-		
-		// VAOs and VBOs for each block type
-		startTime = System.currentTimeMillis();
-		for (Block.BlockType type : Block.BlockType.values()) {
-			int vao = glGenVertexArrays();
-			glBindVertexArray(vao);
-			
-			float[] typeVertices = Block.precomputeVertexesForType(type);
-			
-			int vbo = glGenBuffers();
-			glBindBuffer(GL_ARRAY_BUFFER, vbo);
-			glBufferData(GL_ARRAY_BUFFER, typeVertices, GL_STATIC_DRAW);
-			
-			// Positions
-			int stride = 8 * FLOAT_BYTES;
-			glVertexAttribPointer(0, 3, GL_FLOAT, false, stride, 0);
-			glEnableVertexAttribArray(0);
-			// Normals
-			glVertexAttribPointer(1, 3, GL_FLOAT, false, stride, 3 * FLOAT_BYTES);
-			glEnableVertexAttribArray(1);
-			// TexCoords
-			glVertexAttribPointer(2, 2, GL_FLOAT, false, stride, 6 * FLOAT_BYTES);
-			glEnableVertexAttribArray(2);
-			
-			// Instance Buffer
-			List<Integer> instancePositions = instancePositionsMap.get(type);
-			IntBuffer instanceBuffer = BufferUtils.createIntBuffer(instancePositions.size());
-			for (int val: instancePositions) instanceBuffer.put(val);
-			instanceBuffer.flip();
-			
-			int instanceVBO = glGenBuffers();
-			glBindBuffer(GL_ARRAY_BUFFER, instanceVBO);
-			glBufferData(GL_ARRAY_BUFFER, instanceBuffer, GL_STATIC_DRAW);
-			glVertexAttribIPointer(3, 3, GL_INT, 4 * Integer.BYTES, 0);
-			glEnableVertexAttribArray(3);
-			glVertexAttribDivisor(3, 1);
-			
-			glVertexAttribIPointer(4, 1, GL_INT, 4 * Integer.BYTES, 3 * Integer.BYTES);
-			glEnableVertexAttribArray(4);
-			glVertexAttribDivisor(4, 1);
-			
-			glBindVertexArray(0);
-			
-			blockVBOs.put(type, vbo);
-			blockVAOs.put(type, vao);
-			instanceVBOs.put(type, instanceVBO);
-		}
-		endTime = System.currentTimeMillis();
-		logger.info("Setting up VBOs and VAOs took " + (endTime - startTime) / 1000f + " seconds.");
+		logger.info("World update took " + (endTime - startTime) / 1000f + " seconds.");
 		
 		// important!
 		glEnable(GL_DEPTH_TEST);
@@ -364,31 +291,6 @@ public class Window {
 		logger.info("Window closed");
 	}
 	
-	/*
-	 * Fills the instance maps with the positions of each block of the same type
-	 */
-	private void generateInstanceVertices() {
-		for (int x = 0; x < world.length; x++) {
-			for (int y = 0; y < world.height; y++) {
-				for (int z = 0; z < world.width; z++) {
-					Block block = world.positions[x][y][z];
-					if (block.type != Block.BlockType.AIR
-						&& world.blockVisible(x, y, z)) {
-						
-						int offsetX = x - (int) world.length / 2;
-						int offsetY = y - (int) world.height / 2;
-						int offsetZ = z - (int) world.width / 2;
-						
-						instancePositionsMap.get(block.type).add(offsetX);
-						instancePositionsMap.get(block.type).add(offsetY);
-						instancePositionsMap.get(block.type).add(offsetZ);
-						instancePositionsMap.get(block.type).add(block.lightLevel);
-					}
-				}
-			}
-		}
-	}
-	
 	private void render() {
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT ); // clear frame buffer
 		
@@ -397,16 +299,9 @@ public class Window {
 		shader.setMat4("view", view);
 		shader.setMat4("perspective", perspective);
 		shader.setVec3("globalLightDir", new Vector3f(0.7f, -1.0f, 0.5f));
-
-		/*
-		 * Instanced rendering, with one draw call per block type
-		 */
-		for (Block.BlockType type : Block.BlockType.values()) {
-			int vao = blockVAOs.get(type);
-			glBindVertexArray(vao);
-			int numBlocks = instancePositionsMap.get(type).size() / ATTRIBUTES_PER_INSTANCE;
-			glDrawArraysInstanced(GL_TRIANGLES, 0, 36, numBlocks);
-		}
+		
+		glBindVertexArray(chunk.vao);
+		glDrawArrays(GL_TRIANGLES, 0, chunk.vertexCount);
 	}
 	
 	private void processInput() {

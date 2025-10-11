@@ -1,3 +1,4 @@
+import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.Map;
 
@@ -20,6 +21,14 @@ public class Block {
 		UP
 	}
 	
+	public static final Direction[] directions = {new Direction(0, 0, -1),
+			new Direction(0, 0, 1),
+			new Direction(-1, 0, 0),
+			new Direction(1, 0, 0),
+			new Direction(0, -1, 0),
+			new Direction(0, 1, 0)
+	};
+	
 	static private class TilePos {
 		public int x;
 		public int y;
@@ -31,6 +40,7 @@ public class Block {
 	
 	public static float[] vertices = {
 		// positions 		 // normals 	   // texcoords // FaceID
+		// South
 		-0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f, 1.0f, 1.0f, 0f,
 		 0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f, 0.0f, 1.0f, 0f,
 		 0.5f, 	0.5f, -0.5f,  0.0f,  0.0f, -1.0f, 0.0f, 0.0f, 0f,
@@ -38,6 +48,7 @@ public class Block {
 		-0.5f, 	0.5f, -0.5f,  0.0f,  0.0f, -1.0f, 1.0f, 0.0f, 0f,
 		-0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f, 1.0f, 1.0f, 0f,
 			
+		// North
 		-0.5f, -0.5f,  0.5f,  0.0f,  0.0f,  1.0f, 0.0f, 1.0f, 1f,
 		 0.5f, -0.5f,  0.5f,  0.0f,  0.0f,  1.0f, 1.0f, 1.0f, 1f,
    	 	 0.5f, 	0.5f,  0.5f,  0.0f,  0.0f,  1.0f, 1.0f, 0.0f, 1f,
@@ -45,6 +56,7 @@ public class Block {
 		-0.5f, 	0.5f,  0.5f,  0.0f,  0.0f,  1.0f, 0.0f, 0.0f, 1f,
 		-0.5f, -0.5f,  0.5f,  0.0f,  0.0f,  1.0f, 0.0f, 1.0f, 1f,
 			
+		// West
 		-0.5f, 	0.5f,  0.5f, -1.0f,  0.0f,  0.0f, 1.0f, 0.0f, 2f,
 		-0.5f, 	0.5f, -0.5f, -1.0f,  0.0f,  0.0f, 0.0f, 0.0f, 2f,
 		-0.5f, -0.5f, -0.5f, -1.0f,  0.0f,  0.0f, 0.0f, 1.0f, 2f,
@@ -52,6 +64,7 @@ public class Block {
 		-0.5f, -0.5f,  0.5f, -1.0f,  0.0f,  0.0f, 1.0f, 1.0f, 2f,
 		-0.5f, 	0.5f,  0.5f, -1.0f,  0.0f,  0.0f, 1.0f, 0.0f, 2f,
 			
+		// East
 		 0.5f, 	0.5f,  0.5f,  1.0f,  0.0f,  0.0f, 0.0f, 0.0f, 3f,
 		 0.5f, 	0.5f, -0.5f,  1.0f,  0.0f,  0.0f, 1.0f, 0.0f, 3f,
 		 0.5f, -0.5f, -0.5f,  1.0f,  0.0f,  0.0f, 1.0f, 1.0f, 3f,
@@ -59,6 +72,8 @@ public class Block {
 		 0.5f, -0.5f,  0.5f,  1.0f,  0.0f,  0.0f, 0.0f, 1.0f, 3f,
 		 0.5f, 	0.5f,  0.5f,  1.0f,  0.0f,  0.0f, 0.0f, 0.0f, 3f,
 			
+		 
+		 // Down 
 		-0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f, 0.0f, 1.0f, 4f,
 		 0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f, 1.0f, 1.0f, 4f,
 		 0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f, 1.0f, 0.0f, 4f,
@@ -66,6 +81,8 @@ public class Block {
 		-0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f, 0.0f, 0.0f, 4f,
 		-0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f, 0.0f, 1.0f, 4f,
 			
+		
+		// Up
 		-0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f, 1.0f, 1.0f, 5f,
 		 0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f, 0.0f, 1.0f, 5f,
 		 0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f, 0.0f, 0.0f, 5f,
@@ -150,6 +167,38 @@ public class Block {
 		lightLevel = 1;
 	}
 	
+	public static void addFaceToMesh(ArrayList<Float> mesh, BlockType type, int faceDir, int x, int y, int z) {
+		for (int i = faceDir * 6; i < faceDir * 6 + 6; i++) {
+			int fetchOffset = i*9;
+			
+			// Positions
+			mesh.add(vertices[fetchOffset] + x);
+			
+			// Lower top y coordinates by two pixels for water
+			if (type == Block.BlockType.WATER && vertices[fetchOffset + 1] > 0.0f) {
+				mesh.add(vertices[fetchOffset + 1] * 3 / 4 + y);
+			} else mesh.add(vertices[fetchOffset + 1] + y);
+			
+			mesh.add(vertices[fetchOffset + 2] + z);
+			
+			// Normals
+			mesh.add(vertices[fetchOffset + 3]);
+			mesh.add(vertices[fetchOffset + 4]);
+			mesh.add(vertices[fetchOffset + 5]);
+			
+			// UVs
+			int baseIndex = type.ordinal() * 12 + faceDir * 2;
+			int atlasX = atlasIndices[baseIndex];
+			int atlasY = atlasIndices[baseIndex + 1];
+			
+			float vertexU = vertices[fetchOffset + 6];
+			float vertexV = vertices[fetchOffset + 7];
+			
+			mesh.add((atlasX + vertexU) / atlasWidth);
+			mesh.add(1 - (atlasY + vertexV) / atlasHeight);
+		}
+	}
+	
 	/*
 	 * Precomputes positions, normals, texcoords for a given block type
 	 */
@@ -188,5 +237,9 @@ public class Block {
 			typeVertices[vertexOffset + 7] = 1 - (atlasY + vertexV) / atlasHeight;
 		}
 		return typeVertices;
+	}
+
+	public boolean IsTransparent() {
+		return (type == BlockType.AIR || type == BlockType.WATER);
 	}
 }
