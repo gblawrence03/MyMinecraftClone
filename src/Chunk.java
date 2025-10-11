@@ -23,19 +23,30 @@ public class Chunk {
 	public int cOffsetX;
 	public int cOffsetZ;
 	
-	public ArrayList<Float> vertices;
-	public FloatBuffer verticesBuffer;
+	public ArrayList<Float> opaqueVertices;
+	public FloatBuffer opaqueVerticesBuffer;
 	
-	public ArrayList<Integer> lightLevels;
-	public IntBuffer lightLevelsBuffer;
+	public ArrayList<Integer> opaqueLight;
+	public IntBuffer opaqueLightBuffer;
 	
+	public ArrayList<Float> transparentVertices;
+	public FloatBuffer transparentVerticesBuffer;
+	
+	public ArrayList<Integer> transparentLight;
+	public IntBuffer transparentLightBuffer;
+	 
 	public Chunk[][] neighbours; // Holds neighbouring chunks. 
 								 // If null, the neighbouring chunk has not been loaded
 	
-	public int vao;
-	public int vbo;
-	public int lightVBO;
-	public int vertexCount;
+	public int opaqueVAO;
+	public int opaqueVBO;
+	public int opaqueLightVBO;
+	public int opaqueVertexCount;
+	
+	public int transparentVAO;
+	public int transparentVBO;
+	public int transparentLightVBO;
+	public int transparentVertexCount;
 	
 	public Chunk(int cx, int cz, Block[][][] blocks) {
 		this.blocks = blocks;
@@ -53,8 +64,11 @@ public class Chunk {
 	}
 	
 	public void BuildMesh() {
-		vertices = new ArrayList<Float>();
-		lightLevels = new ArrayList<Integer>();
+		opaqueVertices = new ArrayList<Float>();
+		opaqueLight = new ArrayList<Integer>();
+		
+		transparentVertices = new ArrayList<Float>();
+		transparentLight = new ArrayList<Integer>();
 		
 		for (int x = 0; x < CHUNKSIZE; x++) {
 			for (int y = 0; y < CHUNKHEIGHT; y++) {
@@ -79,13 +93,13 @@ public class Chunk {
 						// For now, we'll just draw all faces on chunk borders
 						//TODO: Update to account for neighbouring chunks
 						if (nx < 0 || nx >= CHUNKSIZE || ny < 0 || ny >= CHUNKHEIGHT || nz < 0 || nz >= CHUNKSIZE) {
-							Block.addFaceToMesh(vertices, block.type, d, x + cOffsetX, y, z + cOffsetZ);
-							lightLevels.add(15);
-							lightLevels.add(15);
-							lightLevels.add(15);
-							lightLevels.add(15);
-							lightLevels.add(15);
-							lightLevels.add(15);
+							Block.addFaceToMesh(opaqueVertices, block.type, d, x + cOffsetX, y, z + cOffsetZ);
+							opaqueLight.add(15);
+							opaqueLight.add(15);
+							opaqueLight.add(15);
+							opaqueLight.add(15);
+							opaqueLight.add(15);
+							opaqueLight.add(15);
 							continue;
 						}
 						
@@ -94,56 +108,68 @@ public class Chunk {
 						if (block.type == Block.BlockType.WATER && nextBlock.type != Block.BlockType.AIR) continue;
 						
 						// If the current block is water, we only want to draw the face 
-						// if the next block is air
+						// if the next block is air (not water)
 						if (block.type == Block.BlockType.WATER && nextBlock.type == Block.BlockType.AIR) {
-							Block.addFaceToMesh(vertices, block.type, d, x + cOffsetX, y, z + cOffsetZ);
-							lightLevels.add(nextBlock.lightLevel);
-							lightLevels.add(nextBlock.lightLevel);
-							lightLevels.add(nextBlock.lightLevel);
-							lightLevels.add(nextBlock.lightLevel);
-							lightLevels.add(nextBlock.lightLevel);
-							lightLevels.add(nextBlock.lightLevel);
+							Block.addFaceToMesh(transparentVertices, block.type, d, x + cOffsetX, y, z + cOffsetZ);
+							transparentLight.add(nextBlock.lightLevel);
+							transparentLight.add(nextBlock.lightLevel);
+							transparentLight.add(nextBlock.lightLevel);
+							transparentLight.add(nextBlock.lightLevel);
+							transparentLight.add(nextBlock.lightLevel);
+							transparentLight.add(nextBlock.lightLevel);
 
 							continue;
 						}
 						
 						// Otherwise, we draw the face if the next block is transparent
 						if (nextBlock.IsTransparent()) {
-							Block.addFaceToMesh(vertices, block.type, d, x + cOffsetX, y, z + cOffsetZ);
-							lightLevels.add(nextBlock.lightLevel);
-							lightLevels.add(nextBlock.lightLevel);
-							lightLevels.add(nextBlock.lightLevel);
-							lightLevels.add(nextBlock.lightLevel);
-							lightLevels.add(nextBlock.lightLevel);
-							lightLevels.add(nextBlock.lightLevel);
+							Block.addFaceToMesh(opaqueVertices, block.type, d, x + cOffsetX, y, z + cOffsetZ);
+							opaqueLight.add(nextBlock.lightLevel);
+							opaqueLight.add(nextBlock.lightLevel);
+							opaqueLight.add(nextBlock.lightLevel);
+							opaqueLight.add(nextBlock.lightLevel);
+							opaqueLight.add(nextBlock.lightLevel);
+							opaqueLight.add(nextBlock.lightLevel);
 						}
 					}
 				}
 			}
 		}
 		
-		vertexCount = vertices.size() / 8;
+		opaqueVertexCount = opaqueVertices.size() / 8;
 		
-		verticesBuffer = BufferUtils.createFloatBuffer(vertices.size());
-		for (float f : vertices) verticesBuffer.put(f);
-		verticesBuffer.flip();
+		opaqueVerticesBuffer = BufferUtils.createFloatBuffer(opaqueVertices.size());
+		for (float f : opaqueVertices) opaqueVerticesBuffer.put(f);
+		opaqueVerticesBuffer.flip();
 		
-		lightLevelsBuffer = BufferUtils.createIntBuffer(vertices.size());
-		for (int i : lightLevels) lightLevelsBuffer.put(i);
-		lightLevelsBuffer.flip();
+		opaqueLightBuffer = BufferUtils.createIntBuffer(opaqueVertices.size());
+		for (int i : opaqueLight) opaqueLightBuffer.put(i);
+		opaqueLightBuffer.flip();
+		
+		transparentVertexCount = transparentVertices.size() / 8;
+		
+		transparentVerticesBuffer = BufferUtils.createFloatBuffer(transparentVertices.size());
+		for (float f : transparentVertices) transparentVerticesBuffer.put(f);
+		transparentVerticesBuffer.flip();
+		
+		transparentLightBuffer = BufferUtils.createIntBuffer(transparentVertices.size());
+		for (int i : transparentLight) transparentLightBuffer.put(i);
+		transparentLightBuffer.flip();
 	}
 	
 	private void uploadToGPU() {
-		if (vao != 0) glDeleteVertexArrays(vao);
-		if (vbo != 0) glDeleteBuffers(vbo);
-		if (lightVBO != 0) glDeleteBuffers(lightVBO);
 		
-		vao = glGenVertexArrays();
-		glBindVertexArray(vao);
+		// Opaque
+		if (opaqueVAO != 0) glDeleteVertexArrays(opaqueVAO);
+		if (opaqueVBO != 0) glDeleteBuffers(opaqueVBO);
+		if (opaqueLightVBO != 0) glDeleteBuffers(opaqueLightVBO);
 		
-		int vbo = glGenBuffers();
-		glBindBuffer(GL_ARRAY_BUFFER, vbo);
-		glBufferData(GL_ARRAY_BUFFER, verticesBuffer, GL_STATIC_DRAW);
+		opaqueVAO = glGenVertexArrays();
+		glBindVertexArray(opaqueVAO);
+		
+		opaqueVBO = glGenBuffers();
+		glBindBuffer(GL_ARRAY_BUFFER, opaqueVBO);
+		glBufferData(GL_ARRAY_BUFFER, opaqueVerticesBuffer, GL_STATIC_DRAW);
 		
 		int stride = 8 * Float.BYTES;
 		glVertexAttribPointer(0, 3, GL_FLOAT, false, stride, 0);
@@ -155,13 +181,40 @@ public class Chunk {
 		glVertexAttribPointer(2, 2, GL_FLOAT, false, stride, 6 * Float.BYTES);
 		glEnableVertexAttribArray(2);
 		
-		lightVBO = glGenBuffers();
-		glBindBuffer(GL_ARRAY_BUFFER, lightVBO);
-		glBufferData(GL_ARRAY_BUFFER, lightLevelsBuffer, GL_STATIC_DRAW);
+		opaqueLightVBO = glGenBuffers();
+		glBindBuffer(GL_ARRAY_BUFFER, opaqueLightVBO);
+		glBufferData(GL_ARRAY_BUFFER, opaqueLightBuffer, GL_STATIC_DRAW);
 		
 		glVertexAttribIPointer(3, 1, GL_INT, Integer.BYTES, 0);
 		glEnableVertexAttribArray(3);
 		
+		// Transparent
+		if (transparentVAO != 0) glDeleteVertexArrays(transparentVAO);
+		if (transparentVBO != 0) glDeleteBuffers(transparentVBO);
+		if (transparentLightVBO != 0) glDeleteBuffers(transparentLightVBO);
+		
+		transparentVAO = glGenVertexArrays();
+		glBindVertexArray(transparentVAO);
+		
+		transparentVBO = glGenBuffers();
+		glBindBuffer(GL_ARRAY_BUFFER, transparentVBO);
+		glBufferData(GL_ARRAY_BUFFER, transparentVerticesBuffer, GL_STATIC_DRAW);
+		
+		glVertexAttribPointer(0, 3, GL_FLOAT, false, stride, 0);
+		glEnableVertexAttribArray(0);
+
+		glVertexAttribPointer(1, 3, GL_FLOAT, false, stride, 3 * Float.BYTES);
+		glEnableVertexAttribArray(1);
+
+		glVertexAttribPointer(2, 2, GL_FLOAT, false, stride, 6 * Float.BYTES);
+		glEnableVertexAttribArray(2);
+		
+		transparentLightVBO = glGenBuffers();
+		glBindBuffer(GL_ARRAY_BUFFER, transparentLightVBO);
+		glBufferData(GL_ARRAY_BUFFER, transparentLightBuffer, GL_STATIC_DRAW);
+		
+		glVertexAttribIPointer(3, 1, GL_INT, Integer.BYTES, 0);
+		glEnableVertexAttribArray(3);
 	}
 	
 	private byte lightLevelFrom(int x, int y, int z) {

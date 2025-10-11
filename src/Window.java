@@ -214,7 +214,7 @@ public class Window {
 		// Set viewport
 		glViewport(0, 0, windowWidth, windowHeight);
 		
-		glClearColor(0.6f, 0.7f, 0.85f, 0.0f);
+		glClearColor(0.55f, 0.7f, 0.9f, 0.0f);
 		
 		// Create shader, texture, camera objects
 		Vector3f cameraPos = new Vector3f(Chunk.CHUNKSIZE / 2, 15.0f, Chunk.CHUNKSIZE / 2);
@@ -255,6 +255,7 @@ public class Window {
 		glFrontFace(GL_CCW);
 		glEnable(GL_BLEND);
 		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+		
 
 		// Activate the atlas texture
 		glActiveTexture(GL_TEXTURE0);
@@ -301,8 +302,11 @@ public class Window {
 		shader.setMat4("perspective", perspective);
 		shader.setVec3("globalLightDir", new Vector3f(0.7f, -1.0f, 0.5f));
 		
-		glBindVertexArray(chunk.vao);
-		glDrawArrays(GL_TRIANGLES, 0, chunk.vertexCount);
+		glBindVertexArray(chunk.opaqueVAO);
+		glDrawArrays(GL_TRIANGLES, 0, chunk.opaqueVertexCount);
+		
+		glBindVertexArray(chunk.transparentVAO);
+		glDrawArrays(GL_TRIANGLES, 0, chunk.transparentVertexCount);
 	}
 	
 	private void processInput() {
