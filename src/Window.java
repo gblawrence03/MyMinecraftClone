@@ -119,7 +119,6 @@ public class Window {
 		screenHeight = vidmode.height();
 		
 		aspectRatio = (float) windowWidth / (float) windowHeight;
-		logger.info("Ratio: " + aspectRatio);
 		
 		window = glfwCreateWindow(windowWidth, windowHeight, "MyMinecraftClone", NULL, NULL);
 		centerWindow();
@@ -218,7 +217,7 @@ public class Window {
 		glClearColor(0.6f, 0.7f, 0.85f, 0.0f);
 		
 		// Create shader, texture, camera objects
-		Vector3f cameraPos = new Vector3f(0.0f, 5.0f, 0.0f);
+		Vector3f cameraPos = new Vector3f(Chunk.CHUNKSIZE / 2, 15.0f, Chunk.CHUNKSIZE / 2);
 		Vector3f cameraUp = new Vector3f(0.0f, 1.0f, 0.0f);
 		float yaw = 90;
 		float pitch = 0;
@@ -252,6 +251,8 @@ public class Window {
 		
 		// important!
 		glEnable(GL_DEPTH_TEST);
+		glCullFace(GL_BACK);
+		glFrontFace(GL_CCW);
 		glEnable(GL_BLEND);
 		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 

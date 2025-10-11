@@ -106,6 +106,7 @@ public class Shader {
 		if (success[0] == 0) {
 			String infoLog = glGetProgramInfoLog(ID);
 			logger.warning("Shader program linking failed.\n" + infoLog);
+			System.exit(0);
 		}		
 	}
 	

@@ -13,7 +13,7 @@ import static org.lwjgl.opengl.GL30.*;
 record Direction(int dx, int dy, int dz) { }
 
 public class Chunk {
-	public static final int CHUNKSIZE = 200;
+	public static final int CHUNKSIZE = 1000;
 	public static final int CHUNKHEIGHT = WorldGenerator.worldHeight;
 	
 	public Block[][][] blocks;

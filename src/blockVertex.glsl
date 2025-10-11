@@ -20,7 +20,7 @@ void main()
 		lightLevel = 1;
 	}
 	else {
-		lightLevel = pow(float(aLightLevel + 3) / 18.0, 1.5);
+		lightLevel = 0.09f + 0.91f * float(pow(aLightLevel / 15.0f, 2.5f));
 	}
 
 }

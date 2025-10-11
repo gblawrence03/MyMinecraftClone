@@ -118,7 +118,7 @@ public class WorldGenerator {
 		
 		int circx = Chunk.CHUNKSIZE/2;
 		int circz = Chunk.CHUNKSIZE/2; 
-		int circy = 18; 
+		int circy = 16; 
 		int r = 12;
 		
 		for (int x = 0; x < Chunk.CHUNKSIZE; x++) {
@@ -133,7 +133,7 @@ public class WorldGenerator {
 		
 		circx = Chunk.CHUNKSIZE/2 + 13;
 		circz = Chunk.CHUNKSIZE/2 + 7; 
-		circy = 13; 
+		circy = 11; 
 		r = 9;
 		
 		for (int x = 0; x < Chunk.CHUNKSIZE; x++) {
