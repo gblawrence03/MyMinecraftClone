@@ -20,7 +20,9 @@ void main()
 		lightLevel = 1;
 	}
 	else {
-		lightLevel = 0.09f + 0.91f * float(pow(aLightLevel / 15.0f, 2.5f));
+		// lightLevel = 0.09f + 0.91f * float(pow(aLightLevel / 15.0f, 2.5f));
+		// Each light level is 80% as bright as the previous
+		lightLevel = float(pow(0.8f, (15 - aLightLevel)));
 	}
 
 }

@@ -6,7 +6,7 @@ import java.util.ArrayList;
 public class WorldGenerator {
 	public static final int worldHeight = 50;
 
-	int length, width, height, seaLevel;
+	int seaLevel;
 	
 	int yScale = 80;
 	int baseHeight = 13;
@@ -19,9 +19,7 @@ public class WorldGenerator {
 	float[] continentalIndexes = {0, 0.2f, 0.4f, 0.41f, 0.6f, 0.8f, 1.0f};
 	float[] continentalValues = {0, 0.2f, 0.2f, 0.4f, 0.4f, 0.3f, 0.1f};
 	
-	public WorldGenerator(int seed, int length, int width) {
-		this.length = length;
-		this.width = width;
+	public WorldGenerator(int seed) {
 		this.seaLevel = (int) (yScale / 4);
 		
 		// Generate seeds
@@ -124,7 +122,7 @@ public class WorldGenerator {
 		for (int x = 0; x < Chunk.CHUNKSIZE; x++) {
 			for (int z = 0; z < Chunk.CHUNKSIZE; z++) {
 				for (int i = 0; i < worldHeight; i++) {
-					if ((x - circx)*(x - circx) + (i - circy)*(i - circy) + (z - circz)*(z - circz) < r*r) {
+					if ((x + (Chunk.CHUNKSIZE * cx) - circx)*(x + (Chunk.CHUNKSIZE * cx) - circx) + (i - circy)*(i - circy) + (z + (Chunk.CHUNKSIZE * cz) - circz)*(z + (Chunk.CHUNKSIZE * cz) - circz) < r*r) {
 						blocks[x][i][z] = new Block(Block.BlockType.AIR);
 					}
 				}
@@ -139,7 +137,7 @@ public class WorldGenerator {
 		for (int x = 0; x < Chunk.CHUNKSIZE; x++) {
 			for (int z = 0; z < Chunk.CHUNKSIZE; z++) {
 				for (int i = 0; i < worldHeight; i++) {
-					if ((x - circx)*(x - circx) + (i - circy)*(i - circy) + (z - circz)*(z - circz) < r*r) {
+					if ((x + (Chunk.CHUNKSIZE * cx) - circx)*(x + (Chunk.CHUNKSIZE * cx) - circx) + (i - circy)*(i - circy) + (z + (Chunk.CHUNKSIZE * cz) - circz)*(z + (Chunk.CHUNKSIZE * cz) - circz) < r*r) {
 						blocks[x][i][z] = new Block(Block.BlockType.AIR);
 					}
 				}

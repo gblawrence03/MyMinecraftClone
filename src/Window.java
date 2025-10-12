@@ -31,7 +31,8 @@ public class Window {
 	private Camera camera;
 	private Matrix4f perspective;
 	
-	private WorldGenerator world;
+	private WorldGenerator worldGen;
+	private WorldManager world;
 	private Chunk chunk;
 	
 	private Logger logger;
@@ -235,17 +236,18 @@ public class Window {
 		logger.info("Generating world. Seed for the world generator: \"" + worldSeedString + "\" -> " + worldSeed);
 		
 		long startTime = System.currentTimeMillis();
-		world = new WorldGenerator(worldSeed, 100, 100);
+		worldGen = new WorldGenerator(worldSeed);
 		// For now, the world is just one big chunk
 		//TODO: Multiple chunks!
-		chunk = world.GenerateChunk(0, 0);
+		world = new WorldManager(worldGen);
 		long endTime = System.currentTimeMillis();
 		
 		logger.info("World generation took " + (endTime - startTime) / 1000f + " seconds.");
 		
 		startTime = System.currentTimeMillis();
 		// Build mesh and calculate light levels
-	    chunk.Update();
+		world.UpdateChunkNeighbours();
+	    world.UpdateAll();
 		endTime = System.currentTimeMillis();
 		logger.info("World update took " + (endTime - startTime) / 1000f + " seconds.");
 		
@@ -302,11 +304,15 @@ public class Window {
 		shader.setMat4("perspective", perspective);
 		shader.setVec3("globalLightDir", new Vector3f(0.7f, -1.0f, 0.5f));
 		
-		glBindVertexArray(chunk.opaqueVAO);
-		glDrawArrays(GL_TRIANGLES, 0, chunk.opaqueVertexCount);
+		for (Chunk chunk : world.chunkMap.values()) {
+			glBindVertexArray(chunk.opaqueVAO);
+			glDrawArrays(GL_TRIANGLES, 0, chunk.opaqueVertexCount);
+		}
 		
-		glBindVertexArray(chunk.transparentVAO);
-		glDrawArrays(GL_TRIANGLES, 0, chunk.transparentVertexCount);
+		for (Chunk chunk : world.chunkMap.values()) {
+			glBindVertexArray(chunk.transparentVAO);
+			glDrawArrays(GL_TRIANGLES, 0, chunk.transparentVertexCount);
+		}
 	}
 	
 	private void processInput() {

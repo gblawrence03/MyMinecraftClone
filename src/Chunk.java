@@ -1,5 +1,6 @@
 import java.nio.FloatBuffer;
 import java.util.ArrayList;
+import java.util.HashMap;
 
 import org.lwjgl.BufferUtils;
 import java.nio.*;
@@ -12,8 +13,10 @@ import static org.lwjgl.opengl.GL30.*;
 
 record Direction(int dx, int dy, int dz) { }
 
+record ChunkDirection(int dx, int dz) { } 
+
 public class Chunk {
-	public static final int CHUNKSIZE = 1000;
+	public static final int CHUNKSIZE = 16;
 	public static final int CHUNKHEIGHT = WorldGenerator.worldHeight;
 	
 	public Block[][][] blocks;
@@ -35,7 +38,7 @@ public class Chunk {
 	public ArrayList<Integer> transparentLight;
 	public IntBuffer transparentLightBuffer;
 	 
-	public Chunk[][] neighbours; // Holds neighbouring chunks. 
+	public HashMap<ChunkDirection, Chunk> neighbourMap; // Holds neighbouring chunks. 
 								 // If null, the neighbouring chunk has not been loaded
 	
 	public int opaqueVAO;
@@ -49,6 +52,8 @@ public class Chunk {
 	public int transparentVertexCount;
 	
 	public Chunk(int cx, int cz, Block[][][] blocks) {
+		this.neighbourMap = new HashMap<ChunkDirection, Chunk>();
+		neighbourMap.put(new ChunkDirection(0, 0), this); // Add self to neighbour map
 		this.blocks = blocks;
 		this.cx = cx;
 		this.cz = cz;
@@ -57,10 +62,62 @@ public class Chunk {
 		cOffsetZ = cz * CHUNKSIZE;
 	}
 	
+	public void SetNeighbour(int dx, int dz, Chunk chunk) {
+		neighbourMap.put(new ChunkDirection(dx, dz), chunk);
+	}
+	
 	public void Update() {
 		CalculateLightLevels();
 		BuildMesh();
 		uploadToGPU();
+	}
+	
+	// x, y, z is positions in our chunk's reference frame - 
+	// e.g. -1 x or z means the block beyond our left/south border (in the next chunk)
+	// does not work if more than 1 chunk away
+	// currently does not work for diagonal chunks (more neighbours needed)
+	private Block getBlockAt(int x, int y, int z) {
+		if (y >= CHUNKHEIGHT || y < 0) return null; // no block above or below y limit
+		
+		int chunkdx = 0;
+		int chunkdz = 0;
+		
+		int xInChunk = x;
+		int zInChunk = z;
+		
+		if (x < 0) {
+			chunkdx = -1;
+			xInChunk = CHUNKSIZE + x;
+		}
+			
+		if (x >= CHUNKSIZE) {
+			chunkdx = 1;
+			xInChunk = x - CHUNKSIZE;
+		}
+		
+		if (z < 0) {
+			chunkdz = -1;
+			zInChunk = CHUNKSIZE + z;
+		}
+			
+		if (z >= CHUNKSIZE) {
+			chunkdz = 1;
+			zInChunk = z - CHUNKSIZE;
+		}
+		
+		Chunk chunk = neighbourMap.get(new ChunkDirection(chunkdx, chunkdz));
+		if (chunk == null) return null;
+		return chunk.blocks[xInChunk][y][zInChunk];
+	}
+	
+	// x, y, z: Position of the block in our chunk. 
+	// dir: direction of the block we care about.
+	private Block getBlockInDirection(int x, int y, int z, Direction dir) {
+		int nx = x + dir.dx();
+		int ny = y + dir.dy();
+		int nz = z + dir.dz();
+		
+		return getBlockAt(nx, ny, nz);
 	}
 	
 	public void BuildMesh() {
@@ -79,57 +136,63 @@ public class Chunk {
 					if (block.type == Block.BlockType.AIR) continue;
 					
 					for (int d = 0; d < 6; d++) {
-						int nx = x + Block.directions[d].dx();
-						int ny = y + Block.directions[d].dy();
-						int nz = z + Block.directions[d].dz();
+						Direction dir = Block.directions[d];
+						
+						Block nextBlock = getBlockInDirection(x, y, z, dir);
+						
+						boolean drawFace = false;
+						int lightLevel = 15;
 						
 						// The light level of the face will be the light level of the next block
 						
-						
-						if ((nx < 0 || nx >= CHUNKSIZE || nz < 0 || nz >= CHUNKSIZE) && block.type == Block.BlockType.WATER) {
-							continue;
-						} 
-						
-						// For now, we'll just draw all faces on chunk borders
-						//TODO: Update to account for neighbouring chunks
-						if (nx < 0 || nx >= CHUNKSIZE || ny < 0 || ny >= CHUNKHEIGHT || nz < 0 || nz >= CHUNKSIZE) {
-							Block.addFaceToMesh(opaqueVertices, block.type, d, x + cOffsetX, y, z + cOffsetZ);
-							opaqueLight.add(15);
-							opaqueLight.add(15);
-							opaqueLight.add(15);
-							opaqueLight.add(15);
-							opaqueLight.add(15);
-							opaqueLight.add(15);
-							continue;
+						if (nextBlock == null) {
+							// The next block is either above the height limit
+							// or below 0, regardless, draw the face
+							if (dir.dy() != 1) {
+								drawFace = true;
+								lightLevel = 15;
+							} else {
+								// Otherwise we're at the border of the generated world
+								// In this case, we don't want to draw a water side face
+								// Also assume light level of 1 (for caves etc)
+								//TODO: Fix water side faces
+								if (block.type != Block.BlockType.WATER) {
+									drawFace = true;
+									lightLevel = 1;
+								}
+							}
+						} else {
+							System.out.println("Hello");
+							
+							// Not drawing water if it's not next to air
+							if (block.type == Block.BlockType.WATER && nextBlock.type != Block.BlockType.AIR) continue;
+							
+							// Otherwise, we draw the face if the next block is transparent
+							if (nextBlock.IsTransparent()) {
+								drawFace = true;
+								lightLevel = nextBlock.lightLevel;
+							}
 						}
 						
-						Block nextBlock = blocks[nx][ny][nz];
+						if (drawFace == false) continue;
 						
-						if (block.type == Block.BlockType.WATER && nextBlock.type != Block.BlockType.AIR) continue;
-						
-						// If the current block is water, we only want to draw the face 
-						// if the next block is air (not water)
-						if (block.type == Block.BlockType.WATER && nextBlock.type == Block.BlockType.AIR) {
+						// Add to either transparent or opaque buffers
+						if (block.IsTransparent()) {
 							Block.addFaceToMesh(transparentVertices, block.type, d, x + cOffsetX, y, z + cOffsetZ);
-							transparentLight.add(nextBlock.lightLevel);
-							transparentLight.add(nextBlock.lightLevel);
-							transparentLight.add(nextBlock.lightLevel);
-							transparentLight.add(nextBlock.lightLevel);
-							transparentLight.add(nextBlock.lightLevel);
-							transparentLight.add(nextBlock.lightLevel);
-
-							continue;
-						}
-						
-						// Otherwise, we draw the face if the next block is transparent
-						if (nextBlock.IsTransparent()) {
+							transparentLight.add(lightLevel);
+							transparentLight.add(lightLevel);
+							transparentLight.add(lightLevel);
+							transparentLight.add(lightLevel);
+							transparentLight.add(lightLevel);
+							transparentLight.add(lightLevel);
+						} else {
 							Block.addFaceToMesh(opaqueVertices, block.type, d, x + cOffsetX, y, z + cOffsetZ);
-							opaqueLight.add(nextBlock.lightLevel);
-							opaqueLight.add(nextBlock.lightLevel);
-							opaqueLight.add(nextBlock.lightLevel);
-							opaqueLight.add(nextBlock.lightLevel);
-							opaqueLight.add(nextBlock.lightLevel);
-							opaqueLight.add(nextBlock.lightLevel);
+							opaqueLight.add(lightLevel);
+							opaqueLight.add(lightLevel);
+							opaqueLight.add(lightLevel);
+							opaqueLight.add(lightLevel);
+							opaqueLight.add(lightLevel);
+							opaqueLight.add(lightLevel);
 						}
 					}
 				}
@@ -220,12 +283,17 @@ public class Chunk {
 	private byte lightLevelFrom(int x, int y, int z) {
 		// Light level from sides of the chunk is 1
 		// TODO: Update this to use neighbouring chunks instead
-		if (x < 0 || x >= CHUNKSIZE || z < 0 || z >= CHUNKSIZE || y >= CHUNKHEIGHT) return 1;
+		// if (x < 0 || x >= CHUNKSIZE || z < 0 || z >= CHUNKSIZE) return 1;
+		
+		// Light level from the top of the world is 15
+		if (y >= CHUNKHEIGHT) return 15;
 		
 		// Light level from bottom of the world is 1
 		if (y < 0) return 1;
 		
-		Block block = blocks[x][y][z];
+		Block block = getBlockAt(x, y, z);
+		
+		if (block == null) return 1;
 		
 		if (block.type == Block.BlockType.WATER) {
 			return (byte) Math.max(1, block.lightLevel - 3);
