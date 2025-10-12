@@ -67,7 +67,7 @@ public class Chunk {
 	}
 	
 	public void Update() {
-		CalculateLightLevels();
+		// CalculateLightLevels();
 		BuildMesh();
 		uploadToGPU();
 	}
@@ -304,7 +304,7 @@ public class Chunk {
 		}
 	}
 	
-	public void CalculateLightLevels() {
+	public void PropagateSunlight() {
 		// All blocks at the top of the world have a light level of 15
 		for (int x = 0; x < CHUNKSIZE; x++) {
 			for (int z = 0; z < CHUNKSIZE; z++) {
@@ -314,6 +314,7 @@ public class Chunk {
 			}
 		}
 		
+
 		// First pass: Trivial cases where light level must equal 15
 		for (int x = 0; x < CHUNKSIZE; x++) {
 			for (int y = CHUNKHEIGHT - 2; y >= 0; y--) {
@@ -327,41 +328,52 @@ public class Chunk {
 				}
 			}
 		}
+	}
+	
+	// Perform a single light update for the chunk. Returns true if a change was made.
+	public boolean LightUpdate() {
+		boolean changeMade = false;
+		for (int x = 0; x < CHUNKSIZE; x++) {
+			for (int y = CHUNKHEIGHT - 2; y >= 0; y--) {
+				for (int z = 0; z < CHUNKSIZE; z++) {
+					Block block = blocks[x][y][z];
+					
+					if (block.isExposedToSunlight) {
+						if (block.type == Block.BlockType.WATER) block.lightLevel = 12;
+						else block.lightLevel = 15;
+						continue;
+					}
+					
+					int newLightLevel;
+					newLightLevel = Math.max(
+						lightLevelFrom(x - 1, y, z), Math.max(lightLevelFrom(x + 1, y, z),
+						Math.max(lightLevelFrom(x, y - 1, z), Math.max(lightLevelFrom(x, y + 1, z),
+						Math.max(lightLevelFrom(x, y, z - 1), lightLevelFrom(x, y, z + 1))))));
+					
+					if (block.type == Block.BlockType.AIR) {
+						newLightLevel = Math.max(newLightLevel - 1, 1);
+					}
+					
+					if (newLightLevel != block.lightLevel) {
+						block.lightLevel = newLightLevel;
+						changeMade = true;
+					}
+				}
+			}
+		}
 		
+		return changeMade;
+	}
+	
+	// Perform a complete light update for the whole chunk.
+	public void CalculateLightLevels() {
+		PropagateSunlight();
 		
 		// Continue making passes, calculating the new light levels, until no changes are made
 		boolean changeMade = true;
 		
 		while (changeMade == true) {
-			changeMade = false;
-			for (int x = 0; x < CHUNKSIZE; x++) {
-				for (int y = CHUNKHEIGHT - 2; y >= 0; y--) {
-					for (int z = 0; z < CHUNKSIZE; z++) {
-						Block block = blocks[x][y][z];
-						
-						if (block.isExposedToSunlight) {
-							if (block.type == Block.BlockType.WATER) block.lightLevel = 12;
-							else block.lightLevel = 15;
-							continue;
-						}
-						
-						int newLightLevel;
-						newLightLevel = Math.max(
-							lightLevelFrom(x - 1, y, z), Math.max(lightLevelFrom(x + 1, y, z),
-							Math.max(lightLevelFrom(x, y - 1, z), Math.max(lightLevelFrom(x, y + 1, z),
-							Math.max(lightLevelFrom(x, y, z - 1), lightLevelFrom(x, y, z + 1))))));
-						
-						if (block.type == Block.BlockType.AIR) {
-							newLightLevel = Math.max(newLightLevel - 1, 1);
-						}
-						
-						if (newLightLevel != block.lightLevel) {
-							block.lightLevel = newLightLevel;
-							changeMade = true;
-						}
-					}
-				}
-			}
+			changeMade = LightUpdate();
 		}	
 	}
 }

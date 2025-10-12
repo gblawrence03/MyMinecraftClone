@@ -16,7 +16,25 @@ public class WorldManager {
 		}
 	}
 	
+	public void RecalculateLight() {
+		// Propagate sunlight for all chunks
+		for (Chunk chunk : chunkMap.values()) {
+			chunk.PropagateSunlight();
+		}
+		
+		// Perform passes through all chunks
+		boolean changeMade = true;
+		while (changeMade) {
+			changeMade = false;
+			for (Chunk chunk : chunkMap.values()) {
+				changeMade = changeMade || chunk.LightUpdate();
+			}
+		}
+	}
+	
 	public void UpdateAll() {
+		UpdateChunkNeighbours();
+		RecalculateLight();
 		for (Chunk chunk : chunkMap.values()) {
 			chunk.Update();
 		}
