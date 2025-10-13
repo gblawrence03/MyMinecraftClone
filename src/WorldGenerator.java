@@ -145,6 +145,7 @@ public class WorldGenerator {
 		}
 		
 		return new Chunk(cx, cz, blocks);
+		
 	}
 	
 	// Splines for terrain shaping

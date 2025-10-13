@@ -156,6 +156,11 @@ public class Window {
 					glfwSetCursorPos(window, 0, 0);
 				}
 			}
+			
+			// Lighting debugging
+			if (key == GLFW_KEY_SPACE && action == GLFW_RELEASE) {
+				world.SingleLightStep();
+			}
 		});
 		
 		glfwSetMouseButtonCallback(window, (window, button, action, mods) -> {
@@ -332,6 +337,7 @@ public class Window {
 		Boolean sPressed = glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS;
 		Boolean dPressed = glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS;
 		Boolean aPressed = glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS;
+		
 		
 		// Slow down diagonal movement
 		if ((wPressed || sPressed) && (dPressed || aPressed)) {

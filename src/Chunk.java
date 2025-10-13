@@ -162,8 +162,6 @@ public class Chunk {
 								}
 							}
 						} else {
-							System.out.println("Hello");
-							
 							// Not drawing water if it's not next to air
 							if (block.type == Block.BlockType.WATER && nextBlock.type != Block.BlockType.AIR) continue;
 							
@@ -286,10 +284,10 @@ public class Chunk {
 		// if (x < 0 || x >= CHUNKSIZE || z < 0 || z >= CHUNKSIZE) return 1;
 		
 		// Light level from the top of the world is 15
-		if (y >= CHUNKHEIGHT) return 15;
+		if (y >= CHUNKHEIGHT - 1) return 15;
 		
 		// Light level from bottom of the world is 1
-		if (y < 0) return 1;
+		if (y <= 0) return 1;
 		
 		Block block = getBlockAt(x, y, z);
 		
@@ -320,9 +318,11 @@ public class Chunk {
 			for (int y = CHUNKHEIGHT - 2; y >= 0; y--) {
 				for (int z = 0; z < CHUNKSIZE; z++) {
 					Block block = blocks[x][y][z];
+					Block aboveBlock = blocks[x][y + 1][z];
 					
-					if (blocks[x][y + 1][z].type == Block.BlockType.AIR && blocks[x][y + 1][z].lightLevel == 15) {
-						block.lightLevel = 15;
+					if (aboveBlock.type == Block.BlockType.AIR && aboveBlock.lightLevel == 15) {
+						if (block.type == Block.BlockType.WATER) block.lightLevel = 12;
+						else block.lightLevel = 15;
 						block.isExposedToSunlight = true;
 					}
 				}
@@ -338,9 +338,8 @@ public class Chunk {
 				for (int z = 0; z < CHUNKSIZE; z++) {
 					Block block = blocks[x][y][z];
 					
+					
 					if (block.isExposedToSunlight) {
-						if (block.type == Block.BlockType.WATER) block.lightLevel = 12;
-						else block.lightLevel = 15;
 						continue;
 					}
 					

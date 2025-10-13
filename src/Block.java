@@ -160,7 +160,7 @@ public class Block {
 	
 	// Maximum: 15, minimum: 1
 	public int lightLevel;
-	public boolean isExposedToSunlight;
+	public boolean isExposedToSunlight = false;
 	
 	public Block(BlockType type) {
 		this.type = type;
