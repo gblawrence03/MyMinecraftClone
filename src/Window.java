@@ -33,7 +33,6 @@ public class Window {
 	
 	private WorldGenerator worldGen;
 	private WorldManager world;
-	private Chunk chunk;
 	
 	private Logger logger;
 	
@@ -242,19 +241,10 @@ public class Window {
 		
 		long startTime = System.currentTimeMillis();
 		worldGen = new WorldGenerator(worldSeed);
-		// For now, the world is just one big chunk
-		//TODO: Multiple chunks!
 		world = new WorldManager(worldGen);
 		long endTime = System.currentTimeMillis();
 		
 		logger.info("World generation took " + (endTime - startTime) / 1000f + " seconds.");
-		
-		startTime = System.currentTimeMillis();
-		// Build mesh and calculate light levels
-		world.UpdateChunkNeighbours();
-	    world.UpdateAll();
-		endTime = System.currentTimeMillis();
-		logger.info("World update took " + (endTime - startTime) / 1000f + " seconds.");
 		
 		// important!
 		glEnable(GL_DEPTH_TEST);
@@ -282,6 +272,7 @@ public class Window {
 		while ( !glfwWindowShouldClose(window) ) {	
 			glfwSwapBuffers(window); // swap colour buffers
 			processInput();			
+			
 			render();
 			// poll for window events, invokes key callback and resize callback
 			glfwPollEvents();
