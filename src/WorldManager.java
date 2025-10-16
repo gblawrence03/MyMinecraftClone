@@ -11,7 +11,7 @@ public class WorldManager {
 	
 	private boolean LIGHT_DEBUG = false;
 	
-	private int chunkRenderDistance = 13;
+	private int chunkRenderDistance = 10;
 	
 	public WorldManager(WorldGenerator worldGen) {
 		this.worldGen = worldGen;
@@ -35,34 +35,29 @@ public class WorldManager {
 			}
 		}
 		
+		ArrayList<Chunk> chunksToUpdate = new ArrayList<Chunk>();
+		ArrayList<Chunk> newChunks = new ArrayList<Chunk>();
 		// Add the chunks to the chunkmap if they don't exist
 		for (ChunkPos chunkPos : required) {
 			if (!chunkMap.containsKey(chunkPos)) {
 				Chunk chunk = worldGen.GenerateChunk(chunkPos.cx(), chunkPos.cz());
 				chunkMap.put(chunkPos, chunk);
-			} else { // Remove required chunks that already exist, that way required contains only new chunks
-				required.remove(chunkPos);
-			}
+				chunksToUpdate.add(chunk);
+				newChunks.add(chunk);
+			} 
 		}
 		
 		// Remove chunks that don't need to be loaded
-		for (ChunkPos chunkPos : chunkMap.keySet()) {
-			if (!required.contains(chunkPos)) {
-				chunkMap.remove(chunkPos);
-			}
-		}
+		chunkMap.keySet().removeIf(pos -> !required.contains(pos));
 		
 		// Update chunk neighbours
 		UpdateChunkNeighbours();
 		
 		// Light updates
-		ArrayList<Chunk> chunksToUpdate = new ArrayList<Chunk>();
-		for (ChunkPos pos : required) {
-			// Add the new chunk 
-			Chunk chunk = chunkMap.get(pos);
-			chunksToUpdate.add(chunk);
+		
+		for (Chunk newChunk : newChunks) {
 			// Add the new chunk's neighbours
-			for (Chunk neighbour : chunk.neighbourMap.values()) {
+			for (Chunk neighbour : newChunk.neighbourMap.values()) {
 				if (neighbour != null) chunksToUpdate.add(neighbour);
 			}
 		}

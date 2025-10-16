@@ -49,7 +49,9 @@ public class Window {
 	private boolean firstMouse = true;
 	
 	private float deltaTime;
-
+	
+	private final int TPS = 20;
+	
 	private GLFWVidMode vidmode;
 	
 	public static void main(String[] args) {
@@ -222,7 +224,7 @@ public class Window {
 		glClearColor(0.55f, 0.7f, 0.9f, 0.0f);
 		
 		// Create shader, texture, camera objects
-		Vector3f cameraPos = new Vector3f(Chunk.CHUNKSIZE / 2, 15.0f, Chunk.CHUNKSIZE / 2);
+		Vector3f cameraPos = new Vector3f(0, 15.0f, 0);
 		Vector3f cameraUp = new Vector3f(0.0f, 1.0f, 0.0f);
 		float yaw = 90;
 		float pitch = 0;
@@ -269,11 +271,23 @@ public class Window {
 		long frames = 0;
 		deltaTime = 0.0f;
 		
+		int tickEvery = 1000 / TPS;
+		int tickDelta = 0;
+		
 		while ( !glfwWindowShouldClose(window) ) {	
 			glfwSwapBuffers(window); // swap colour buffers
 			processInput();			
 			
 			render();
+			
+			if (tickDelta > tickEvery) {
+				int playerChunkX = (int) camera.Position.x / Chunk.CHUNKSIZE;
+				int playerChunkZ = (int) camera.Position.z / Chunk.CHUNKSIZE;
+				
+				world.GenerateChunks(playerChunkX, playerChunkZ);
+				tickDelta = 0;
+			}
+			
 			// poll for window events, invokes key callback and resize callback
 			glfwPollEvents();
 			
@@ -281,6 +295,7 @@ public class Window {
 			frames++;
 			currentTime = System.currentTimeMillis();
 			deltaTime = currentTime - lastFrame;
+			tickDelta += deltaTime;
 			if (currentTime - oldTime >= 1000) {
 				System.out.println("FPS: " + frames);
 				frames = 0;
