@@ -31,6 +31,8 @@ public class Window {
 	private Camera camera;
 	private Matrix4f perspective;
 	
+	private int renderDistance = 16;
+	
 	private WorldGenerator worldGen;
 	private WorldManager world;
 	
@@ -224,7 +226,7 @@ public class Window {
 		glClearColor(0.55f, 0.7f, 0.9f, 0.0f);
 		
 		// Create shader, texture, camera objects
-		Vector3f cameraPos = new Vector3f(0, 15.0f, 0);
+		Vector3f cameraPos = new Vector3f(0f, 15.0f, 0f);
 		Vector3f cameraUp = new Vector3f(0.0f, 1.0f, 0.0f);
 		float yaw = 90;
 		float pitch = 0;
@@ -243,7 +245,9 @@ public class Window {
 		
 		long startTime = System.currentTimeMillis();
 		worldGen = new WorldGenerator(worldSeed);
-		world = new WorldManager(worldGen);
+		int playerChunkX = Math.floorDiv((int) camera.Position.x, Chunk.CHUNKSIZE);
+		int playerChunkZ = Math.floorDiv((int) camera.Position.z, Chunk.CHUNKSIZE);
+		world = new WorldManager(worldGen, playerChunkX, playerChunkZ, renderDistance);
 		long endTime = System.currentTimeMillis();
 		
 		logger.info("World generation took " + (endTime - startTime) / 1000f + " seconds.");
@@ -281,8 +285,8 @@ public class Window {
 			render();
 			
 			if (tickDelta > tickEvery) {
-				int playerChunkX = (int) camera.Position.x / Chunk.CHUNKSIZE;
-				int playerChunkZ = (int) camera.Position.z / Chunk.CHUNKSIZE;
+				playerChunkX = Math.floorDiv((int) camera.Position.x, Chunk.CHUNKSIZE);
+				playerChunkZ = Math.floorDiv((int) camera.Position.z, Chunk.CHUNKSIZE);
 				
 				world.GenerateChunks(playerChunkX, playerChunkZ);
 				tickDelta = 0;
@@ -314,6 +318,7 @@ public class Window {
 		shader.setMat4("view", view);
 		shader.setMat4("perspective", perspective);
 		shader.setVec3("globalLightDir", new Vector3f(0.7f, -1.0f, 0.5f));
+		shader.setInt("chunkRenderDistance", renderDistance);
 		
 		for (Chunk chunk : world.chunkMap.values()) {
 			glBindVertexArray(chunk.opaqueVAO);

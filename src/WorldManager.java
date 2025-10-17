@@ -11,13 +11,18 @@ public class WorldManager {
 	
 	private boolean LIGHT_DEBUG = false;
 	
-	private int chunkRenderDistance = 10;
+	private int chunkRenderDistance = 3;
 	
-	public WorldManager(WorldGenerator worldGen) {
+	public WorldManager(WorldGenerator worldGen, int cx, int cz, int renderDistance) {
+		SetRenderDistance(renderDistance);
 		this.worldGen = worldGen;
 		chunkMap = new HashMap<ChunkPos, Chunk>();
 		
-		GenerateChunks(0, 0);
+		GenerateChunks(cx, cz);
+	}
+	
+	public void SetRenderDistance(int d) {
+		this.chunkRenderDistance = Math.max(1, d);
 	}
 	
 	// Generate chunks centred around a specified position
@@ -29,7 +34,7 @@ public class WorldManager {
 		// Determine which chunks need to exist
 		for (int x = cx - r; x <= cx + r; x++) {
 			for (int z = cz - r; z <= cz + r; z++) {
-				if ((x - cx)*(x - cx) + (z - cz)*(z - cz) <= r*r) {
+				if ((x - cx)*(x - cx) + (z - cz)*(z - cz) < r*r) {
 					required.add(new ChunkPos(x, z));
 				}
 			}

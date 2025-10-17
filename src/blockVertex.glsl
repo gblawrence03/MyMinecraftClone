@@ -7,13 +7,15 @@ layout (location = 3) in int aLightLevel;
 uniform mat4 view;
 uniform mat4 perspective;
 
+out vec3 fPosition;
 out vec2 texCoord;
 flat out vec3 normal;
 flat out float lightLevel;
 
 void main()
 {
-	gl_Position = perspective * view * vec4(aPos, 1.0);
+	fPosition = vec3(view * vec4(aPos, 1.0));
+	gl_Position = perspective * vec4(fPosition, 1.0);
 	texCoord = aTexCoord;
 	normal = aNormal;
 	if (aLightLevel == 15) {

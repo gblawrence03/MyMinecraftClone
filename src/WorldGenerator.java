@@ -114,6 +114,9 @@ public class WorldGenerator {
 			}
 		}
 		
+		
+		// This test cave code breaks the world generation beyond a certain distance due to overflow
+		/*
 		int circx = Chunk.CHUNKSIZE/2;
 		int circz = Chunk.CHUNKSIZE/2; 
 		int circy = 16; 
@@ -143,7 +146,7 @@ public class WorldGenerator {
 				}
 			}
 		}
-		
+		*/
 		return new Chunk(cx, cz, blocks);
 		
 	}
