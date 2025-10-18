@@ -1,5 +1,7 @@
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 record ChunkPos(int cx, int cz) { };
 
@@ -8,6 +10,8 @@ public class WorldManager {
 	public boolean LightChangeMade = true;
 	public int LightSteps = 0;
 	public WorldGenerator worldGen;
+	
+	private final ExecutorService chunkUpdateExecutor = Executors.newSingleThreadExecutor();
 	
 	private boolean LIGHT_DEBUG = false;
 	
@@ -58,20 +62,36 @@ public class WorldManager {
 		// Update chunk neighbours
 		UpdateChunkNeighbours();
 		
-		// Light updates
-		
+		// Add new chunk neighbours 
 		for (Chunk newChunk : newChunks) {
-			// Add the new chunk's neighbours
 			for (Chunk neighbour : newChunk.neighbourMap.values()) {
 				if (neighbour != null) chunksToUpdate.add(neighbour);
 			}
 		}
 		
-		RecalculateLightFor(chunksToUpdate);
+		// Lighting and mesh updates on background thread
+		chunkUpdateExecutor.submit(() -> {
+			RecalculateLightFor(chunksToUpdate);
+			
+			// Build chunk meshes and schedule for GPU upload on main thread
+			synchronized (chunksToUpdate) {
+				for (Chunk chunk : chunksToUpdate) {
+					chunk.buildMesh();
+					chunk.needsGPUUpdate = true;
+				}
+			}
+		});
 		
-		// Generate meshes
-		for (Chunk chunk : chunksToUpdate) {
-			chunk.Update();
+	}
+	
+	public void updateReadyChunks() {
+		synchronized (chunkMap) {
+			for (Chunk chunk : chunkMap.values()) {
+				if (chunk.needsGPUUpdate) {
+					chunk.uploadToGPU();
+					chunk.needsGPUUpdate = false;
+				}
+			}
 		}
 	}
 	

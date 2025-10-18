@@ -289,6 +289,7 @@ public class Window {
 				playerChunkZ = Math.floorDiv((int) camera.Position.z, Chunk.CHUNKSIZE);
 				
 				world.GenerateChunks(playerChunkX, playerChunkZ);
+				world.updateReadyChunks();
 				tickDelta = 0;
 			}
 			

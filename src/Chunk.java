@@ -50,8 +50,10 @@ public class Chunk {
 	public int transparentVBO;
 	public int transparentLightVBO;
 	public int transparentVertexCount;
+	public boolean needsGPUUpdate;
 	
 	public Chunk(int cx, int cz, Block[][][] blocks) {
+		needsGPUUpdate = false;
 		this.neighbourMap = new HashMap<ChunkDirection, Chunk>();
 		neighbourMap.put(new ChunkDirection(0, 0), this); // Add self to neighbour map
 		this.blocks = blocks;
@@ -68,7 +70,7 @@ public class Chunk {
 	
 	public void Update() {
 		// CalculateLightLevels();
-		BuildMesh();
+		buildMesh();
 		uploadToGPU();
 	}
 	
@@ -120,7 +122,7 @@ public class Chunk {
 		return getBlockAt(nx, ny, nz);
 	}
 	
-	public void BuildMesh() {
+	public void buildMesh() {
 		opaqueVertices = new ArrayList<Float>();
 		opaqueLight = new ArrayList<Integer>();
 		
@@ -218,7 +220,7 @@ public class Chunk {
 		transparentLightBuffer.flip();
 	}
 	
-	private void uploadToGPU() {
+	public void uploadToGPU() {
 		
 		// Opaque
 		if (opaqueVAO != 0) glDeleteVertexArrays(opaqueVAO);
