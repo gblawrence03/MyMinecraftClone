@@ -1,6 +1,7 @@
 import java.nio.FloatBuffer;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.lwjgl.BufferUtils;
 import java.nio.*;
@@ -50,10 +51,10 @@ public class Chunk {
 	public int transparentVBO;
 	public int transparentLightVBO;
 	public int transparentVertexCount;
-	public boolean needsGPUUpdate;
+	
+	public final AtomicBoolean readyForGPU = new AtomicBoolean();
 	
 	public Chunk(int cx, int cz, Block[][][] blocks) {
-		needsGPUUpdate = false;
 		this.neighbourMap = new HashMap<ChunkDirection, Chunk>();
 		neighbourMap.put(new ChunkDirection(0, 0), this); // Add self to neighbour map
 		this.blocks = blocks;
@@ -364,6 +365,16 @@ public class Chunk {
 		}
 		
 		return changeMade;
+	}
+	
+	public void unload() {
+		neighbourMap.clear();
+		blocks = null;
+		glDeleteVertexArrays(transparentVAO);
+		glDeleteVertexArrays(opaqueVAO);
+		
+		glDeleteBuffers(transparentVBO);
+		glDeleteBuffers(opaqueVBO);
 	}
 	
 	// Perform a complete light update for the whole chunk.

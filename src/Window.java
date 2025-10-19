@@ -52,7 +52,7 @@ public class Window {
 	
 	private float deltaTime;
 	
-	private final int TPS = 20;
+	private final int TPS = 5;
 	
 	private GLFWVidMode vidmode;
 	
@@ -208,6 +208,10 @@ public class Window {
 			aspectRatio = (float) windowWidth / (float) windowHeight;
 		});
 		
+		glfwSetWindowCloseCallback(window, (window) -> {
+			world.unload();
+		});
+		
 		// Make OpenGL context current
 		glfwMakeContextCurrent(window);
 	
@@ -282,16 +286,35 @@ public class Window {
 			glfwSwapBuffers(window); // swap colour buffers
 			processInput();			
 			
+			
 			render();
+
+			
 			
 			if (tickDelta > tickEvery) {
+				
+				
 				playerChunkX = Math.floorDiv((int) camera.Position.x, Chunk.CHUNKSIZE);
 				playerChunkZ = Math.floorDiv((int) camera.Position.z, Chunk.CHUNKSIZE);
 				
+				startTime = System.currentTimeMillis();
 				world.GenerateChunks(playerChunkX, playerChunkZ);
+				endTime = System.currentTimeMillis();
+				if ((endTime - startTime) > 100) {
+					logger.info("Long chunk generation: " + (endTime - startTime) / 1000f + " seconds.");
+				}
+				
+				startTime = System.currentTimeMillis();
 				world.updateReadyChunks();
+				endTime = System.currentTimeMillis();
+				if ((endTime - startTime) > 100) {
+					logger.info("Long chunk update: " + (endTime - startTime) / 1000f + " seconds.");
+				}
 				tickDelta = 0;
+								
 			}
+			
+
 			
 			// poll for window events, invokes key callback and resize callback
 			glfwPollEvents();
@@ -312,6 +335,8 @@ public class Window {
 	}
 	
 	private void render() {
+		
+		TimingUtils.measureExecutionTime( () -> {
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT ); // clear frame buffer
 		
 		Matrix4f view = camera.getViewMatrix();
@@ -320,7 +345,9 @@ public class Window {
 		shader.setMat4("perspective", perspective);
 		shader.setVec3("globalLightDir", new Vector3f(0.7f, -1.0f, 0.5f));
 		shader.setInt("chunkRenderDistance", renderDistance);
+		}, 100, "shaderSetup", logger);
 		
+		long startTime = System.currentTimeMillis();
 		for (Chunk chunk : world.chunkMap.values()) {
 			glBindVertexArray(chunk.opaqueVAO);
 			glDrawArrays(GL_TRIANGLES, 0, chunk.opaqueVertexCount);
@@ -329,6 +356,10 @@ public class Window {
 		for (Chunk chunk : world.chunkMap.values()) {
 			glBindVertexArray(chunk.transparentVAO);
 			glDrawArrays(GL_TRIANGLES, 0, chunk.transparentVertexCount);
+		}
+		long endTime = System.currentTimeMillis();
+		if ((endTime - startTime) > 100) {
+			logger.info("Long glDraw calls: " + (endTime - startTime) / 1000f + " seconds.");
 		}
 	}
 	

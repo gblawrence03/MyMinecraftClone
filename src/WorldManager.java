@@ -57,7 +57,21 @@ public class WorldManager {
 		}
 		
 		// Remove chunks that don't need to be loaded
-		chunkMap.keySet().removeIf(pos -> !required.contains(pos));
+		// chunkMap.keySet().removeIf(pos -> !required.contains(pos));
+		
+		ArrayList<ChunkPos> toRemove = new ArrayList<>();
+		for (ChunkPos pos : chunkMap.keySet()) {
+			if (!required.contains(pos)) {
+				toRemove.add(pos);
+			}
+		}
+		
+		for (ChunkPos pos : toRemove) {
+			Chunk chunk = chunkMap.remove(pos);
+			if (chunk != null) {
+				chunk.unload();
+			}
+		}
 		
 		// Update chunk neighbours
 		UpdateChunkNeighbours();
@@ -71,27 +85,30 @@ public class WorldManager {
 		
 		// Lighting and mesh updates on background thread
 		chunkUpdateExecutor.submit(() -> {
-			RecalculateLightFor(chunksToUpdate);
+			
 			
 			// Build chunk meshes and schedule for GPU upload on main thread
-			synchronized (chunksToUpdate) {
-				for (Chunk chunk : chunksToUpdate) {
-					chunk.buildMesh();
-					chunk.needsGPUUpdate = true;
-				}
+			RecalculateLightFor(chunksToUpdate);
+				
+			for (Chunk chunk : chunksToUpdate) {
+				chunk.buildMesh();
+				chunk.readyForGPU.set(true);
 			}
+			
 		});
 		
 	}
 	
+	public void unload() {
+		chunkUpdateExecutor.shutdown();
+	}
+	
 	public void updateReadyChunks() {
-		synchronized (chunkMap) {
-			for (Chunk chunk : chunkMap.values()) {
-				if (chunk.needsGPUUpdate) {
-					chunk.uploadToGPU();
-					chunk.needsGPUUpdate = false;
-				}
+		for (Chunk chunk : chunkMap.values()) {
+			if (chunk.readyForGPU.getAndSet(false)) {
+				chunk.uploadToGPU();
 			}
+			
 		}
 	}
 	
